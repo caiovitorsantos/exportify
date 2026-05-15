@@ -9,6 +9,8 @@ GEM
   remote: https://rubygems.org/
   specs:
     base64 (0.3.0)
+    minitest (5.27.0)
+    rake (13.4.2)
     webrick (1.9.2)
 
 PLATFORMS
@@ -17,6 +19,8 @@ PLATFORMS
 
 DEPENDENCIES
   exportify!
+  minitest (~> 5.0)
+  rake (~> 13.0)
 
 BUNDLED WITH
    2.5.22
