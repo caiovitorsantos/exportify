@@ -31,12 +31,14 @@ module Exportify
 
           tracks << {
             artist:       track['artists'].first['name'],
+            artist_id:    track['artists'].first['id'],
             all_artists:  track['artists'].map { |a| a['name'] }.join(', '),
             name:         clean_name,
             raw_name:     track['name'],
             album:        track.dig('album', 'name') || '',
             year:         (track.dig('album', 'release_date') || '')[0..3],
-            track_number: track['track_number'] || 0
+            track_number: track['track_number'] || 0,
+            genre:        ''
           }
         end
 
@@ -44,6 +46,25 @@ module Exportify
       end
 
       tracks
+    end
+
+    def enrich_with_genres(tracks, token)
+      artist_ids = tracks.map { |t| t[:artist_id] }.uniq.compact
+      genres_by_id = {}
+
+      artist_ids.each_slice(50) do |batch|
+        uri = URI("https://api.spotify.com/v1/artists?ids=#{batch.join(',')}")
+        req = Net::HTTP::Get.new(uri)
+        req['Authorization'] = "Bearer #{token}"
+        res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
+        data = JSON.parse(res.body)
+        (data['artists'] || []).each do |artist|
+          next unless artist
+          genres_by_id[artist['id']] = artist['genres'].first || ''
+        end
+      end
+
+      tracks.map { |t| t.merge(genre: genres_by_id[t[:artist_id]] || '') }
     end
   end
 end

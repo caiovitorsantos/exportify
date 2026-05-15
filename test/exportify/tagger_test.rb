@@ -7,7 +7,8 @@ class TaggerTest < Minitest::Test
     artist:       'Cardi B',
     album:        'WAP',
     year:         '2020',
-    track_number: 1
+    track_number: 1,
+    genre:        'hip hop'
   }.freeze
 
   def test_tag_calls_python3
@@ -56,5 +57,13 @@ class TaggerTest < Minitest::Test
       Exportify::Tagger.tag('/tmp/test.mp3', TRACK)
     end
     assert_includes script, '/tmp/test.mp3'
+  end
+
+  def test_tag_python_script_includes_genre
+    script = nil
+    Exportify::Tagger.stub(:system, ->(_cmd, _flag, s, **) { script = s; true }) do
+      Exportify::Tagger.tag('/tmp/test.mp3', TRACK)
+    end
+    assert_includes script, 'hip hop'
   end
 end

@@ -34,6 +34,7 @@ module Exportify
 
       puts 'Fetching playlist...'
       tracks = Spotify.playlist_tracks(playlist_id, token)
+      tracks = Spotify.enrich_with_genres(tracks, token)
       puts "#{tracks.size} tracks found\n\n"
 
       ok = skip = failed = 0
