@@ -40,6 +40,6 @@ Retag all already-downloaded files without re-downloading:
 bin/exportify https://open.spotify.com/playlist/<playlist_id> --retag
 ```
 
-MP3 files are saved to `~/projects/exportify/musicas/` as `Artist - Track.mp3`. Tracks that already exist on disk are skipped automatically.
+MP3 files are saved to `~/projects/exportify/musics/` as `Artist - Track.mp3`. Tracks that already exist on disk are skipped automatically.
 
 The OAuth token is cached at `~/.exportify_token.json` and refreshed automatically when it expires.

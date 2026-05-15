@@ -8,7 +8,7 @@ require_relative 'tagger'
 
 module Exportify
   module CLI
-    OUTPUT_DIR = File.expand_path('~/projects/exportify/musicas')
+    OUTPUT_DIR = File.expand_path('~/projects/exportify/musics')
 
     module_function
 
