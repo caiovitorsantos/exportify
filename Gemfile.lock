@@ -1,0 +1,22 @@
+PATH
+  remote: .
+  specs:
+    exportify (0.1.0)
+      base64 (~> 0.2)
+      webrick (~> 1.9)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    base64 (0.3.0)
+    webrick (1.9.2)
+
+PLATFORMS
+  arm64-darwin-25
+  ruby
+
+DEPENDENCIES
+  exportify!
+
+BUNDLED WITH
+   2.5.22
