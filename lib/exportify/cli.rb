@@ -156,9 +156,7 @@ module Exportify
     end
 
     def open_tty
-      File.open('/dev/tty', 'r+')
-    rescue Errno::ENOENT, Errno::ENXIO
-      $stdin
+      IO.console || $stdin
     end
 
     def read_secret(tty)
