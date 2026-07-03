@@ -119,24 +119,25 @@ module Exportify
       require 'io/console'
 
       cfg = Config.load
+      tty = open_tty
 
       puts '=== Exportify Setup ==='
       puts
 
       default_dir = dir || cfg.fetch('output_dir', DEFAULT_OUTPUT_DIR)
       print "Diretório principal [#{default_dir}]: "
-      dir_input = $stdin.gets.chomp
+      dir_input = tty.gets.chomp
       new_dir   = dir_input.empty? ? default_dir : dir_input
 
       current_id = cfg['spotify_client_id'] || ''
       id_hint    = current_id.empty? ? '' : " [#{current_id[0..7]}...]"
       print "Spotify Client ID#{id_hint}: "
-      id_input = $stdin.gets.chomp
+      id_input = tty.gets.chomp
       new_id   = id_input.empty? ? current_id : id_input
 
       secret_hint = cfg['spotify_client_secret'] ? ' [configurado]' : ''
       print "Spotify Client Secret#{secret_hint}: "
-      new_secret = read_secret
+      new_secret = read_secret(tty)
       puts
       new_secret = cfg['spotify_client_secret'] if new_secret.empty?
 
@@ -150,13 +151,21 @@ module Exportify
       )
 
       puts "\nConfiguração salva em #{Config::CONFIG_PATH}"
+    ensure
+      tty&.close
     end
 
-    def read_secret
-      if $stdin.respond_to?(:tty?) && $stdin.tty?
-        $stdin.noecho(&:gets).chomp
+    def open_tty
+      File.open('/dev/tty', 'r+')
+    rescue Errno::ENOENT, Errno::ENXIO
+      $stdin
+    end
+
+    def read_secret(tty)
+      if tty.respond_to?(:noecho)
+        tty.noecho(&:gets).chomp
       else
-        $stdin.gets.chomp
+        tty.gets.chomp
       end
     end
   end

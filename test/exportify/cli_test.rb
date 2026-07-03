@@ -31,14 +31,12 @@ class CLITest < Minitest::Test
 
   def test_init_saves_credentials_and_dir
     require 'tmpdir'
-
-    input = "#{Dir.tmpdir}/exportify_test\nmy_client_id\nmy_client_secret\n"
     saved = {}
+    tty   = StringIO.new("#{Dir.tmpdir}/exportify_test\nmy_client_id\nmy_client_secret\n")
 
-    $stdin = StringIO.new(input)
     Exportify::Config.stub(:load, -> { {} }) do
       Exportify::Config.stub(:save, ->(data) { saved = data }) do
-        Exportify::CLI.stub(:read_secret, -> { 'my_client_secret' }) do
+        Exportify::CLI.stub(:open_tty, -> { tty }) do
           assert_output(/Configuração salva/) { Exportify::CLI.run_init }
         end
       end
@@ -47,18 +45,16 @@ class CLITest < Minitest::Test
     assert_equal 'my_client_id',     saved['spotify_client_id']
     assert_equal 'my_client_secret', saved['spotify_client_secret']
     assert saved['output_dir']
-  ensure
-    $stdin = STDIN
   end
 
   def test_init_keeps_existing_secret_when_blank_input
     saved = {}
     cfg   = { 'spotify_client_id' => 'old_id', 'spotify_client_secret' => 'old_secret', 'output_dir' => 'musics' }
+    tty   = StringIO.new("\n\n\n")
 
-    $stdin = StringIO.new("\n\n")
     Exportify::Config.stub(:load, -> { cfg }) do
       Exportify::Config.stub(:save, ->(data) { saved = data }) do
-        Exportify::CLI.stub(:read_secret, -> { '' }) do
+        Exportify::CLI.stub(:open_tty, -> { tty }) do
           assert_output(/Configuração salva/) { Exportify::CLI.run_init }
         end
       end
@@ -66,8 +62,6 @@ class CLITest < Minitest::Test
 
     assert_equal 'old_id',     saved['spotify_client_id']
     assert_equal 'old_secret', saved['spotify_client_secret']
-  ensure
-    $stdin = STDIN
   end
 
   def test_extracts_playlist_id_from_url
