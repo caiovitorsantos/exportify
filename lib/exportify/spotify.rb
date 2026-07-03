@@ -14,7 +14,7 @@ module Exportify
       req['Authorization'] = "Bearer #{token}"
       res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
       data = JSON.parse(res.body)
-      abort "Erro da API Spotify: #{data['error']}" if data['error']
+      handle_error!(data['error'], 'playlist')
       data['name']
     end
 
@@ -28,7 +28,7 @@ module Exportify
         req['Authorization'] = "Bearer #{token}"
         res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
         data = JSON.parse(res.body)
-        abort "Erro da API Spotify: #{data['error']}" if data['error']
+        handle_error!(data['error'], 'tracks')
 
         data['items'].each do |item|
           track = item['item']
@@ -56,6 +56,26 @@ module Exportify
       end
 
       tracks
+    end
+
+    def handle_error!(error, context)
+      return unless error
+
+      status  = error['status']
+      message = error['message']
+
+      case status
+      when 401
+        abort "Erro #{status}: token inválido ou expirado. Apague ~/.exportify_token.json e tente novamente."
+      when 403
+        abort "Erro 403 ao buscar #{context}: acesso negado pelo Spotify.\n" \
+              "Isso ocorre em playlists de artistas ou gravadoras com conteúdo protegido.\n" \
+              "Tente com uma playlist pessoal ou pública de outro usuário."
+      when 404
+        abort "Erro 404: playlist não encontrada. Verifique se o link está correto."
+      else
+        abort "Erro da API Spotify (#{status}): #{message}"
+      end
     end
 
     def enrich_with_genres(tracks, token)
