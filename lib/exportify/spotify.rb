@@ -82,18 +82,14 @@ module Exportify
       artist_ids = tracks.map { |t| t[:artist_id] }.uniq.compact
       genres_by_id = {}
 
-      artist_ids.each_slice(50) do |batch|
-        uri = URI("https://api.spotify.com/v1/artists?ids=#{batch.join(',')}")
+      artist_ids.each do |artist_id|
+        uri = URI("https://api.spotify.com/v1/artists/#{artist_id}")
         req = Net::HTTP::Get.new(uri)
         req['Authorization'] = "Bearer #{token}"
         res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
         data = JSON.parse(res.body)
         handle_error!(data['error'], 'artistas')
-        (data['artists'] || []).each do |artist|
-          next unless artist
-
-          genres_by_id[artist['id']] = artist['genres'].first || ''
-        end
+        genres_by_id[data['id']] = (data['genres'] || []).first || ''
       end
 
       tracks.map { |t| t.merge(genre: genres_by_id[t[:artist_id]] || '') }
