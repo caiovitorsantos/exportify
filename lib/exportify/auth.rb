@@ -6,6 +6,7 @@ require 'json'
 require 'uri'
 require 'base64'
 require 'webrick'
+require_relative 'config'
 
 module Exportify
   module Auth
@@ -114,11 +115,11 @@ module Exportify
     end
 
     def client_id
-      ENV.fetch('SPOTIFY_CLIENT_ID', nil)
+      ENV.fetch('SPOTIFY_CLIENT_ID', nil) || Config.load['spotify_client_id']
     end
 
     def client_secret
-      ENV.fetch('SPOTIFY_CLIENT_SECRET', nil)
+      ENV.fetch('SPOTIFY_CLIENT_SECRET', nil) || Config.load['spotify_client_secret']
     end
   end
 end

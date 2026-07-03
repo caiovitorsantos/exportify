@@ -57,6 +57,17 @@ Metrics/BlockLength:
     - 'test/**/*'
     - 'lib/exportify/cli.rb'
 
+Metrics/ModuleLength:
+  Exclude:
+    - 'lib/exportify/cli.rb'
+
+Metrics/ClassLength:
+  Exclude:
+    - 'test/**/*'
+
+Minitest/MultipleAssertions:
+  Max: 5
+
 # Dependências de desenvolvimento ficam no Gemfile, não no gemspec
 Gemspec/DevelopmentDependencies:
   EnforcedStyle: Gemfile

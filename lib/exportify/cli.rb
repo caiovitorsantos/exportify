@@ -22,7 +22,7 @@ module Exportify
 
       parser = OptionParser.new do |opts|
         opts.banner = "Usage:\n  " \
-                      "exportify init [<diretório>]\n  " \
+                      "exportify init\n  " \
                       'exportify <spotify_playlist_url> [--retag] [--sync]'
         opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
         opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
@@ -33,9 +33,7 @@ module Exportify
 
       abort parser.banner unless playlist_url
 
-      unless ENV['SPOTIFY_CLIENT_ID'] && ENV['SPOTIFY_CLIENT_SECRET']
-        abort 'Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables'
-      end
+      abort 'Credenciais não configuradas. Execute: exportify init' unless Auth.client_id && Auth.client_secret
 
       playlist_id = playlist_url.match(%r{playlist/([A-Za-z0-9]+)})&.captures&.first
       abort 'Invalid playlist URL' unless playlist_id
@@ -117,11 +115,49 @@ module Exportify
       end
     end
 
-    def run_init(dir)
-      path = File.expand_path(dir || DEFAULT_OUTPUT_DIR)
-      Config.save('output_dir' => path)
-      puts "Diretório principal definido: #{path}"
-      puts "Salvo em #{Config::CONFIG_PATH}"
+    def run_init(dir = nil)
+      require 'io/console'
+
+      cfg = Config.load
+
+      puts '=== Exportify Setup ==='
+      puts
+
+      default_dir = dir || cfg.fetch('output_dir', DEFAULT_OUTPUT_DIR)
+      print "Diretório principal [#{default_dir}]: "
+      dir_input = $stdin.gets.chomp
+      new_dir   = dir_input.empty? ? default_dir : dir_input
+
+      current_id = cfg['spotify_client_id'] || ''
+      id_hint    = current_id.empty? ? '' : " [#{current_id[0..7]}...]"
+      print "Spotify Client ID#{id_hint}: "
+      id_input = $stdin.gets.chomp
+      new_id   = id_input.empty? ? current_id : id_input
+
+      secret_hint = cfg['spotify_client_secret'] ? ' [configurado]' : ''
+      print "Spotify Client Secret#{secret_hint}: "
+      new_secret = read_secret
+      puts
+      new_secret = cfg['spotify_client_secret'] if new_secret.empty?
+
+      abort 'Client ID não pode ser vazio.' if new_id.empty?
+      abort 'Client Secret não pode ser vazio.' if new_secret.to_s.empty?
+
+      Config.save(
+        'output_dir' => File.expand_path(new_dir),
+        'spotify_client_id' => new_id,
+        'spotify_client_secret' => new_secret
+      )
+
+      puts "\nConfiguração salva em #{Config::CONFIG_PATH}"
+    end
+
+    def read_secret
+      if $stdin.respond_to?(:noecho)
+        $stdin.noecho(&:gets).chomp
+      else
+        $stdin.gets.chomp
+      end
     end
   end
 end

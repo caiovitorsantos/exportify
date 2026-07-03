@@ -18,6 +18,7 @@ module Exportify
 
     def save(data)
       File.write(CONFIG_PATH, JSON.pretty_generate(load.merge(data)))
+      File.chmod(0o600, CONFIG_PATH)
     end
 
     def output_dir
