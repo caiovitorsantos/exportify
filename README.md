@@ -102,6 +102,8 @@ git push --tags
 
 O workflow de release dispara automaticamente e publica a gem. Requer o secret `RUBYGEMS_API_KEY` configurado em Settings → Secrets → Actions do repositório.
 
+Veja o [CHANGELOG.md](CHANGELOG.md) para o histórico de versões.
+
 ## Notas
 
 - O token OAuth é cacheado em `~/.exportify_token.json` e renovado automaticamente quando expira. Se a sessão for revogada, o arquivo é removido e um novo login é solicitado.
