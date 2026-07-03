@@ -16,8 +16,10 @@ Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, a
 3. Instale as dependências:
 
 ```sh
-bundle install
+make install
 ```
+
+Isso verifica a versão do Ruby, instala o yt-dlp (via Homebrew no macOS ou apt no Linux), instala o mutagen (Python) e roda `bundle install`. Cada etapa pode ser rodada isoladamente (`make check-ruby`, `make install-yt-dlp`, `make install-mutagen`, `make bundle`) — veja `make help` para a lista completa. Se preferir instalar manualmente, veja a seção [Requirements](#requirements) acima.
 
 4. Execute o setup interativo:
 
