@@ -1,6 +1,6 @@
 # Exportify
 
-Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, album, year, track number).
+Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, album, year, track number, genre).
 
 ## Requirements
 
@@ -28,18 +28,56 @@ bundle install
 
 ## Usage
 
-Download all tracks from a playlist:
+### Definir o diretório principal
+
+Por padrão os arquivos são salvos em `musics/` dentro do projeto. Para usar outro caminho:
+
+```sh
+bin/exportify init ~/Music
+```
+
+A configuração é salva em `~/.exportify` e vale para todos os comandos seguintes. Para voltar ao padrão:
+
+```sh
+bin/exportify init
+```
+
+### Baixar uma playlist
 
 ```sh
 bin/exportify https://open.spotify.com/playlist/<playlist_id>
 ```
 
-Retag all already-downloaded files without re-downloading:
+Os arquivos são organizados em subdiretórios pelo nome da playlist:
+
+```
+musics/
+  Rock dos Anos 80/
+    Queen - Bohemian Rhapsody.mp3
+    David Bowie - Heroes.mp3
+  Trap Brasil/
+    ...
+```
+
+Faixas que já existem no disco são ignoradas automaticamente. Rodar o comando novamente após adicionar músicas à playlist baixa apenas as novas.
+
+### Sincronização bidirecional
+
+Para remover do disco as músicas que foram retiradas da playlist:
+
+```sh
+bin/exportify https://open.spotify.com/playlist/<playlist_id> --sync
+```
+
+### Regravar tags ID3
+
+Para atualizar as tags dos arquivos já baixados sem rebaixar:
 
 ```sh
 bin/exportify https://open.spotify.com/playlist/<playlist_id> --retag
 ```
 
-MP3 files are saved to `~/projects/exportify/musics/` as `Artist - Track.mp3`. Tracks that already exist on disk are skipped automatically.
+## Notas
 
-The OAuth token is cached at `~/.exportify_token.json` and refreshed automatically when it expires.
+- O token OAuth é cacheado em `~/.exportify_token.json` e renovado automaticamente quando expira. Se a sessão for revogada, o arquivo é removido e um novo login é solicitado.
+- Playlists de artistas oficiais ou gravadoras podem retornar erro 403 — isso é uma restrição da API do Spotify para apps de terceiros sem acesso estendido.
