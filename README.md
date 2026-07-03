@@ -77,6 +77,30 @@ Para atualizar as tags dos arquivos já baixados sem rebaixar:
 bin/exportify https://open.spotify.com/playlist/<playlist_id> --retag
 ```
 
+## Desenvolvimento
+
+```sh
+bundle exec rake test      # testes
+bundle exec rubocop        # lint
+bundle exec bundler-audit check --update  # vulnerabilidades em dependências
+```
+
+O CI roda os três automaticamente a cada push.
+
+## Release
+
+Para publicar uma nova versão no RubyGems:
+
+1. Atualize `lib/exportify/version.rb`
+2. Crie e faça push da tag:
+
+```sh
+git tag v1.0.0
+git push --tags
+```
+
+O workflow de release dispara automaticamente e publica a gem. Requer o secret `RUBYGEMS_API_KEY` configurado em Settings → Secrets → Actions do repositório.
+
 ## Notas
 
 - O token OAuth é cacheado em `~/.exportify_token.json` e renovado automaticamente quando expira. Se a sessão for revogada, o arquivo é removido e um novo login é solicitado.
