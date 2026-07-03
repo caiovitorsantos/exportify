@@ -29,7 +29,7 @@ module Exportify
       end
 
       parser.parse!(argv)
-      playlist_url = argv[0]
+      playlist_url = argv[0]&.split('?', 2)&.first
 
       abort parser.banner unless playlist_url
 
