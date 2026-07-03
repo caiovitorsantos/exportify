@@ -23,6 +23,12 @@ class SpotifyTest < Minitest::Test
     }
   end
 
+  def test_returns_playlist_name
+    stub_http({ 'name' => 'Rock Clássico' }) do
+      assert_equal 'Rock Clássico', Exportify::Spotify.playlist_name('abc123', 'token')
+    end
+  end
+
   def test_returns_tracks_from_single_page
     body = { 'items' => [item(name: 'Womanizer', artists: ['Britney Spears'])], 'next' => nil }
     stub_http(body) do

@@ -8,6 +8,16 @@ module Exportify
   module Spotify
     module_function
 
+    def playlist_name(playlist_id, token)
+      uri = URI("https://api.spotify.com/v1/playlists/#{playlist_id}?fields=name")
+      req = Net::HTTP::Get.new(uri)
+      req['Authorization'] = "Bearer #{token}"
+      res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
+      data = JSON.parse(res.body)
+      abort "Erro da API Spotify: #{data['error']}" if data['error']
+      data['name']
+    end
+
     def playlist_tracks(playlist_id, token)
       tracks = []
       url    = "https://api.spotify.com/v1/playlists/#{playlist_id}/items?limit=100"

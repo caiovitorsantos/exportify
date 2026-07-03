@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'fileutils'
+require 'optparse'
+require 'set'
 require_relative 'auth'
 require_relative 'spotify'
 require_relative 'downloader'
@@ -8,17 +10,24 @@ require_relative 'tagger'
 
 module Exportify
   module CLI
-    OUTPUT_DIR = File.expand_path('~/projects/exportify/musics')
+    DEFAULT_OUTPUT_DIR = 'musics'
 
     module_function
 
     def run(argv)
-      retag = argv.delete('--retag')
+      retag = false
+      sync  = false
+
+      parser = OptionParser.new do |opts|
+        opts.banner = 'Usage: exportify <spotify_playlist_url> [--retag] [--sync]'
+        opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
+        opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
+      end
+
+      parser.parse!(argv)
       playlist_url = argv[0]
 
-      unless playlist_url
-        abort 'Usage: exportify <spotify_playlist_url> [--retag]'
-      end
+      abort parser.banner unless playlist_url
 
       unless ENV['SPOTIFY_CLIENT_ID'] && ENV['SPOTIFY_CLIENT_SECRET']
         abort 'Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables'
@@ -27,15 +36,19 @@ module Exportify
       playlist_id = playlist_url.match(/playlist\/([A-Za-z0-9]+)/)&.captures&.first
       abort 'Invalid playlist URL' unless playlist_id
 
-      FileUtils.mkdir_p(OUTPUT_DIR)
-
       puts 'Authenticating with Spotify...'
       token = Auth.access_token
 
       puts 'Fetching playlist...'
-      tracks = Spotify.playlist_tracks(playlist_id, token)
-      tracks = Spotify.enrich_with_genres(tracks, token)
-      puts "#{tracks.size} tracks found\n\n"
+      name       = Spotify.playlist_name(playlist_id, token)
+      tracks     = Spotify.playlist_tracks(playlist_id, token)
+      tracks     = Spotify.enrich_with_genres(tracks, token)
+      output_dir = File.expand_path(File.join(DEFAULT_OUTPUT_DIR, Downloader.sanitize(name)))
+
+      FileUtils.mkdir_p(output_dir)
+
+      puts "#{tracks.size} tracks found"
+      puts "Output: #{output_dir}\n\n"
 
       ok = skip = failed = 0
 
@@ -43,7 +56,7 @@ module Exportify
         artist   = Downloader.sanitize(track[:artist])
         name     = Downloader.sanitize(track[:name])
         filename = "#{artist} - #{name}.mp3"
-        filepath = File.join(OUTPUT_DIR, filename)
+        filepath = File.join(output_dir, filename)
 
         print "[#{i + 1}/#{tracks.size}] #{filename} "
 
@@ -66,7 +79,7 @@ module Exportify
         end
 
         puts '(downloading...)'
-        success = Downloader.download(track, OUTPUT_DIR)
+        success = Downloader.download(track, output_dir)
 
         if success && File.exist?(filepath)
           Tagger.tag(filepath, track)
@@ -76,10 +89,27 @@ module Exportify
         end
       end
 
+      removed = 0
+
+      if sync
+        expected = tracks.map do |track|
+          "#{Downloader.sanitize(track[:artist])} - #{Downloader.sanitize(track[:name])}.mp3"
+        end.to_set
+
+        Dir.glob(File.join(output_dir, '*.mp3')).each do |file|
+          unless expected.include?(File.basename(file))
+            puts "Removing #{File.basename(file)}"
+            File.delete(file)
+            removed += 1
+          end
+        end
+      end
+
       if retag
         puts "\nDone: #{ok} retagged, #{skip} not found."
       else
-        puts "\nDone: #{ok} downloaded, #{skip} skipped, #{failed} failed."
+        removed_msg = sync ? ", #{removed} removed" : ''
+        puts "\nDone: #{ok} downloaded, #{skip} skipped, #{failed} failed#{removed_msg}."
       end
     end
   end
