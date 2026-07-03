@@ -11,36 +11,35 @@ Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, a
 
 ## Setup
 
-1. Create an app at [developer.spotify.com](https://developer.spotify.com/dashboard).
-2. Add `http://127.0.0.1:8888/callback` as a Redirect URI in the app settings.
-3. Export your credentials:
-
-```sh
-export SPOTIFY_CLIENT_ID=your_client_id
-export SPOTIFY_CLIENT_SECRET=your_client_secret
-```
-
-4. Install the gem dependencies:
+1. Crie um app em [developer.spotify.com](https://developer.spotify.com/dashboard).
+2. Adicione `http://127.0.0.1:8888/callback` como Redirect URI nas configurações do app.
+3. Instale as dependências:
 
 ```sh
 bundle install
 ```
 
-## Usage
-
-### Definir o diretório principal
-
-Por padrão os arquivos são salvos em `musics/` dentro do projeto. Para usar outro caminho:
-
-```sh
-bin/exportify init ~/Music
-```
-
-A configuração é salva em `~/.exportify` e vale para todos os comandos seguintes. Para voltar ao padrão:
+4. Execute o setup interativo:
 
 ```sh
 bin/exportify init
 ```
+
+```
+=== Exportify Setup ===
+
+Diretório principal [musics]: ~/Music
+Spotify Client ID: <seu client id>
+Spotify Client Secret: ████████
+
+Configuração salva em ~/.exportify
+```
+
+As credenciais e o diretório ficam salvos em `~/.exportify` (permissão `600`). Para reconfigurar qualquer campo, execute `init` novamente — Enter em branco mantém o valor atual.
+
+> **Alternativa:** as variáveis de ambiente `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET` têm prioridade sobre o arquivo de configuração, útil em ambientes de CI.
+
+## Usage
 
 ### Baixar uma playlist
 
