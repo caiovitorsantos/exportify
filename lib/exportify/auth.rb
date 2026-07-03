@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'fileutils'
 require 'net/http'
 require 'json'
 require 'uri'
@@ -36,6 +37,7 @@ module Exportify
       )
       res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
       data = JSON.parse(res.body)
+      handle_token_error!(data)
       data['refresh_token'] ||= token_data['refresh_token']
       save_token(data)
     end
@@ -49,8 +51,24 @@ module Exportify
         'code'         => code,
         'redirect_uri' => REDIRECT_URI
       )
-      res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
-      save_token(JSON.parse(res.body))
+      res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
+      data = JSON.parse(res.body)
+      handle_token_error!(data)
+      save_token(data)
+    end
+
+    def handle_token_error!(data)
+      return unless data['error']
+
+      case data['error']
+      when 'invalid_client'
+        abort 'Erro de autenticação: SPOTIFY_CLIENT_ID ou SPOTIFY_CLIENT_SECRET inválidos.'
+      when 'invalid_grant'
+        FileUtils.rm_f(TOKEN_FILE)
+        abort "Sessão expirada ou revogada. Arquivo de token removido.\nExecute o comando novamente para fazer login."
+      else
+        abort "Erro ao obter token Spotify: #{data['error']} — #{data['error_description']}"
+      end
     end
 
     def authorize!

@@ -88,6 +88,7 @@ module Exportify
         req['Authorization'] = "Bearer #{token}"
         res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
         data = JSON.parse(res.body)
+        handle_error!(data['error'], 'artistas')
         (data['artists'] || []).each do |artist|
           next unless artist
           genres_by_id[artist['id']] = artist['genres'].first || ''
