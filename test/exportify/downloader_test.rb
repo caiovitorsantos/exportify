@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class DownloaderTest < Minitest::Test
@@ -43,14 +45,15 @@ class DownloaderTest < Minitest::Test
 
   def test_download_calls_yt_dlp
     track = {
-      raw_name:    'Womanizer',
+      raw_name: 'Womanizer',
       all_artists: 'Britney Spears',
-      artist:      'Britney Spears',
-      name:        'Womanizer'
+      artist: 'Britney Spears',
+      name: 'Womanizer'
     }
 
     Exportify::Downloader.stub(:system, true) do
       result = Exportify::Downloader.download(track, '/tmp')
+
       assert result
     end
   end

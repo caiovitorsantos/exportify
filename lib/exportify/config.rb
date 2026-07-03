@@ -10,6 +10,7 @@ module Exportify
 
     def load
       return {} unless File.exist?(CONFIG_PATH)
+
       JSON.parse(File.read(CONFIG_PATH))
     rescue JSON::ParserError
       {}

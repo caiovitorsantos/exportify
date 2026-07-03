@@ -14,16 +14,15 @@ Gem::Specification.new do |spec|
                      'writes accurate ID3 tags (title, artist, album, year, track number) ' \
                      'via mutagen.'
 
-  spec.required_ruby_version = '>= 3.0'
+  spec.required_ruby_version = '>= 3.3'
 
   spec.files         = Dir['lib/**/*.rb', 'bin/*', 'README.md', 'exportify.gemspec']
   spec.bindir        = 'bin'
   spec.executables   = ['exportify']
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'webrick', '~> 1.9'
   spec.add_dependency 'base64',  '~> 0.2'
+  spec.add_dependency 'webrick', '~> 1.9'
 
-  spec.add_development_dependency 'minitest', '~> 5.0'
-  spec.add_development_dependency 'rake',     '~> 13.0'
+  spec.metadata['rubygems_mfa_required'] = 'true'
 end

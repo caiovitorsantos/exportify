@@ -19,7 +19,7 @@ module Exportify
     end
 
     def sanitize(str)
-      str.gsub(/[\/\\:*?"<>|]/, '').strip
+      str.gsub(%r{[/\\:*?"<>|]}, '').strip
     end
   end
 end

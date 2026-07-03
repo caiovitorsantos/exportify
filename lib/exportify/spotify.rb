@@ -35,20 +35,20 @@ module Exportify
           next if track.nil? || track['name'].nil?
 
           clean_name = track['name']
-            .gsub(/\s*[\(\[].*?[\)\]]/, '')
-            .gsub(/\s*-\s*(feat|ft)\.?.*/i, '')
-            .strip
+                       .gsub(/\s*[(\[].*?[)\]]/, '')
+                       .gsub(/\s*-\s*(feat|ft)\.?.*/i, '')
+                       .strip
 
           tracks << {
-            artist:       track['artists'].first['name'],
-            artist_id:    track['artists'].first['id'],
-            all_artists:  track['artists'].map { |a| a['name'] }.join(', '),
-            name:         clean_name,
-            raw_name:     track['name'],
-            album:        track.dig('album', 'name') || '',
-            year:         (track.dig('album', 'release_date') || '')[0..3],
+            artist: track['artists'].first['name'],
+            artist_id: track['artists'].first['id'],
+            all_artists: track['artists'].map { |a| a['name'] }.join(', '),
+            name: clean_name,
+            raw_name: track['name'],
+            album: track.dig('album', 'name') || '',
+            year: (track.dig('album', 'release_date') || '')[0..3],
             track_number: track['track_number'] || 0,
-            genre:        ''
+            genre: ''
           }
         end
 
@@ -70,9 +70,9 @@ module Exportify
       when 403
         abort "Erro 403 ao buscar #{context}: acesso negado pelo Spotify.\n" \
               "Isso ocorre em playlists de artistas ou gravadoras com conteúdo protegido.\n" \
-              "Tente com uma playlist pessoal ou pública de outro usuário."
+              'Tente com uma playlist pessoal ou pública de outro usuário.'
       when 404
-        abort "Erro 404: playlist não encontrada. Verifique se o link está correto."
+        abort 'Erro 404: playlist não encontrada. Verifique se o link está correto.'
       else
         abort "Erro da API Spotify (#{status}): #{message}"
       end
@@ -91,6 +91,7 @@ module Exportify
         handle_error!(data['error'], 'artistas')
         (data['artists'] || []).each do |artist|
           next unless artist
+
           genres_by_id[artist['id']] = artist['genres'].first || ''
         end
       end

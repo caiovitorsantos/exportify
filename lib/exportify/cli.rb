@@ -2,7 +2,6 @@
 
 require 'fileutils'
 require 'optparse'
-require 'set'
 require_relative 'auth'
 require_relative 'config'
 require_relative 'spotify'
@@ -22,9 +21,9 @@ module Exportify
       sync  = false
 
       parser = OptionParser.new do |opts|
-        opts.banner = "Usage:\n" \
-                      "  exportify init [<diretório>]\n" \
-                      "  exportify <spotify_playlist_url> [--retag] [--sync]"
+        opts.banner = "Usage:\n  " \
+                      "exportify init [<diretório>]\n  " \
+                      'exportify <spotify_playlist_url> [--retag] [--sync]'
         opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
         opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
       end
@@ -38,7 +37,7 @@ module Exportify
         abort 'Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables'
       end
 
-      playlist_id = playlist_url.match(/playlist\/([A-Za-z0-9]+)/)&.captures&.first
+      playlist_id = playlist_url.match(%r{playlist/([A-Za-z0-9]+)})&.captures&.first
       abort 'Invalid playlist URL' unless playlist_id
 
       puts 'Authenticating with Spotify...'
@@ -97,16 +96,16 @@ module Exportify
       removed = 0
 
       if sync
-        expected = tracks.map do |track|
+        expected = tracks.to_set do |track|
           "#{Downloader.sanitize(track[:artist])} - #{Downloader.sanitize(track[:name])}.mp3"
-        end.to_set
+        end
 
         Dir.glob(File.join(output_dir, '*.mp3')).each do |file|
-          unless expected.include?(File.basename(file))
-            puts "Removing #{File.basename(file)}"
-            File.delete(file)
-            removed += 1
-          end
+          next if expected.include?(File.basename(file))
+
+          puts "Removing #{File.basename(file)}"
+          File.delete(file)
+          removed += 1
         end
       end
 

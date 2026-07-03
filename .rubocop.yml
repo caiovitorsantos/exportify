@@ -1,0 +1,62 @@
+plugins:
+  - rubocop-minitest
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.3
+  Exclude:
+    - 'vendor/**/*'
+    - 'bin/bundle'
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+Style/ModuleFunction:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/DocumentationMethod:
+  Enabled: false
+
+# OpenStruct é usado nos testes de stub HTTP — aceitável nesse contexto
+Style/OpenStructUse:
+  Exclude:
+    - 'test/**/*'
+
+Layout/LineLength:
+  Max: 120
+
+# CLI#run é um dispatcher de entrada — complexidade esperada
+Metrics/MethodLength:
+  Max: 80
+  Exclude:
+    - 'lib/exportify/cli.rb'
+
+Metrics/AbcSize:
+  Max: 80
+  Exclude:
+    - 'lib/exportify/cli.rb'
+
+Metrics/CyclomaticComplexity:
+  Max: 20
+  Exclude:
+    - 'lib/exportify/cli.rb'
+
+Metrics/PerceivedComplexity:
+  Max: 25
+  Exclude:
+    - 'lib/exportify/cli.rb'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'test/**/*'
+    - 'lib/exportify/cli.rb'
+
+# Dependências de desenvolvimento ficam no Gemfile, não no gemspec
+Gemspec/DevelopmentDependencies:
+  EnforcedStyle: Gemfile

@@ -30,9 +30,9 @@ module Exportify
     def refresh_token(token_data)
       uri = URI('https://accounts.spotify.com/api/token')
       req = Net::HTTP::Post.new(uri)
-      req['Authorization'] = 'Basic ' + Base64.strict_encode64("#{client_id}:#{client_secret}")
+      req['Authorization'] = "Basic #{Base64.strict_encode64("#{client_id}:#{client_secret}")}"
       req.set_form_data(
-        'grant_type'    => 'refresh_token',
+        'grant_type' => 'refresh_token',
         'refresh_token' => token_data['refresh_token']
       )
       res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
@@ -45,10 +45,10 @@ module Exportify
     def exchange_code(code)
       uri = URI('https://accounts.spotify.com/api/token')
       req = Net::HTTP::Post.new(uri)
-      req['Authorization'] = 'Basic ' + Base64.strict_encode64("#{client_id}:#{client_secret}")
+      req['Authorization'] = "Basic #{Base64.strict_encode64("#{client_id}:#{client_secret}")}"
       req.set_form_data(
-        'grant_type'   => 'authorization_code',
-        'code'         => code,
+        'grant_type' => 'authorization_code',
+        'code' => code,
         'redirect_uri' => REDIRECT_URI
       )
       res  = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |h| h.request(req) }
@@ -73,10 +73,10 @@ module Exportify
 
     def authorize!
       params = URI.encode_www_form(
-        client_id:     client_id,
+        client_id: client_id,
         response_type: 'code',
-        redirect_uri:  REDIRECT_URI,
-        scope:         SCOPES
+        redirect_uri: REDIRECT_URI,
+        scope: SCOPES
       )
       url = "https://accounts.spotify.com/authorize?#{params}"
 
@@ -86,10 +86,10 @@ module Exportify
 
       code   = nil
       server = WEBrick::HTTPServer.new(
-        Port:        8888,
+        Port: 8888,
         BindAddress: '127.0.0.1',
-        Logger:      WEBrick::Log.new(File::NULL),
-        AccessLog:   []
+        Logger: WEBrick::Log.new(File::NULL),
+        AccessLog: []
       )
       server.mount_proc('/callback') do |req, res|
         code          = req.query['code']
@@ -114,11 +114,11 @@ module Exportify
     end
 
     def client_id
-      ENV['SPOTIFY_CLIENT_ID']
+      ENV.fetch('SPOTIFY_CLIENT_ID', nil)
     end
 
     def client_secret
-      ENV['SPOTIFY_CLIENT_SECRET']
+      ENV.fetch('SPOTIFY_CLIENT_SECRET', nil)
     end
   end
 end
