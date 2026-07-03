@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    exportify (1.0.0)
+    exportify (1.0.1)
       base64 (~> 0.2)
       webrick (~> 1.9)
 
