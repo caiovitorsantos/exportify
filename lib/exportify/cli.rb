@@ -4,6 +4,7 @@ require 'fileutils'
 require 'optparse'
 require 'set'
 require_relative 'auth'
+require_relative 'config'
 require_relative 'spotify'
 require_relative 'downloader'
 require_relative 'tagger'
@@ -15,11 +16,15 @@ module Exportify
     module_function
 
     def run(argv)
+      return run_init(argv[1]) if argv[0] == 'init'
+
       retag = false
       sync  = false
 
       parser = OptionParser.new do |opts|
-        opts.banner = 'Usage: exportify <spotify_playlist_url> [--retag] [--sync]'
+        opts.banner = "Usage:\n" \
+                      "  exportify init [<diretório>]\n" \
+                      "  exportify <spotify_playlist_url> [--retag] [--sync]"
         opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
         opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
       end
@@ -43,7 +48,7 @@ module Exportify
       name       = Spotify.playlist_name(playlist_id, token)
       tracks     = Spotify.playlist_tracks(playlist_id, token)
       tracks     = Spotify.enrich_with_genres(tracks, token)
-      output_dir = File.expand_path(File.join(DEFAULT_OUTPUT_DIR, Downloader.sanitize(name)))
+      output_dir = File.expand_path(File.join(Config.output_dir, Downloader.sanitize(name)))
 
       FileUtils.mkdir_p(output_dir)
 
@@ -111,6 +116,13 @@ module Exportify
         removed_msg = sync ? ", #{removed} removed" : ''
         puts "\nDone: #{ok} downloaded, #{skip} skipped, #{failed} failed#{removed_msg}."
       end
+    end
+
+    def run_init(dir)
+      path = File.expand_path(dir || DEFAULT_OUTPUT_DIR)
+      Config.save('output_dir' => path)
+      puts "Diretório principal definido: #{path}"
+      puts "Salvo em #{Config::CONFIG_PATH}"
     end
   end
 end
