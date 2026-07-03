@@ -153,7 +153,7 @@ module Exportify
     end
 
     def read_secret
-      if $stdin.respond_to?(:noecho)
+      if $stdin.respond_to?(:tty?) && $stdin.tty?
         $stdin.noecho(&:gets).chomp
       else
         $stdin.gets.chomp
