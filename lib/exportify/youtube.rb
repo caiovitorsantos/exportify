@@ -19,10 +19,11 @@ module Exportify
       abort 'Playlist do YouTube vazia ou inacessível.' if entries.empty?
 
       playlist_name = data['title'] || 'YouTube Playlist'
+      valid_entries = entries.compact.reject { |entry| entry['id'].nil? || entry['title'].nil? }
 
       {
         name: playlist_name,
-        tracks: entries.each_with_index.map { |entry, i| build_track(entry, i, playlist_name) }
+        tracks: valid_entries.each_with_index.map { |entry, i| build_track(entry, i, playlist_name) }
       }
     end
 

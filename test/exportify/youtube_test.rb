@@ -124,4 +124,45 @@ class YouTubeTest < Minitest::Test
       end
     end
   end
+
+  def test_fetch_playlist_skips_nil_entries
+    body = {
+      'title' => 'Minha Playlist',
+      'entries' => [
+        { 'id' => 'vid1', 'title' => 'Rick Astley - Never Gonna Give You Up', 'uploader' => 'Rick Astley' },
+        nil,
+        { 'id' => 'vid2', 'title' => 'Video Sem Padrão', 'uploader' => 'Canal Qualquer' }
+      ]
+    }.to_json
+
+    stub_yt_dlp(stdout: body) do
+      result = Exportify::YouTube.fetch_playlist('https://www.youtube.com/playlist?list=PL123')
+
+      assert_equal 2, result[:tracks].size
+      assert_equal 'vid1', result[:tracks][0][:video_id]
+      assert_equal 'vid2', result[:tracks][1][:video_id]
+    end
+  end
+
+  def test_fetch_playlist_uses_cookies_from_browser_when_given
+    body = {
+      'title' => 'Minha Playlist',
+      'entries' => [{ 'id' => 'vid1', 'title' => 'Rick Astley - Never Gonna Give You Up', 'uploader' => 'Rick Astley' }]
+    }.to_json
+    status = OpenStruct.new(success?: true)
+    received_args = nil
+
+    Open3.stub(
+      :capture3,
+      lambda { |*args|
+        received_args = args
+        [body, '', status]
+      }
+    ) do
+      Exportify::YouTube.fetch_playlist('https://www.youtube.com/playlist?list=PL123', browser: 'chrome')
+    end
+
+    assert_includes received_args, '--cookies-from-browser'
+    assert_includes received_args, 'chrome'
+  end
 end
