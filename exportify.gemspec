@@ -16,7 +16,8 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = '>= 3.3'
 
-  spec.files         = Dir['lib/**/*.rb', 'bin/*', 'README.md', 'exportify.gemspec']
+  spec.files = Dir['lib/**/*.rb', 'bin/*', 'views/**/*.erb', 'public/**/*', 'README.md',
+                   'exportify.gemspec']
   spec.bindir        = 'bin'
   spec.executables   = ['exportify']
   spec.require_paths = ['lib']

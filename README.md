@@ -94,6 +94,25 @@ Para atualizar as tags dos arquivos já baixados sem rebaixar:
 bin/exportify https://open.spotify.com/playlist/<playlist_id> --retag
 ```
 
+### Visualizar playlists baixadas (app web)
+
+Para navegar pelas playlists e músicas já baixadas em um painel web:
+
+```sh
+bin/exportify web
+```
+
+Abre um servidor local em `http://localhost:4567` com a lista de playlists,
+as faixas de cada uma e os detalhes (tags ID3, duração, tamanho) com player
+de áudio. Para usar outra porta:
+
+```sh
+bin/exportify web --port 8080
+```
+
+> App somente leitura — os downloads continuam sendo feitos via CLI
+> (`bin/exportify <url>`).
+
 ## Desenvolvimento
 
 ```sh
