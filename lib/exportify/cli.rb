@@ -17,6 +17,7 @@ module Exportify
 
     def run(argv)
       return run_init(argv[1]) if argv[0] == 'init'
+      return run_web(argv[1..]) if argv[0] == 'web'
 
       retag   = false
       sync    = false
@@ -25,6 +26,7 @@ module Exportify
       parser = OptionParser.new do |opts|
         opts.banner = "Usage:\n  " \
                       "exportify init\n  " \
+                      "exportify web [--port PORTA]\n  " \
                       'exportify <playlist_url> [--retag] [--sync] [--browser=NOME]'
         opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
         opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
@@ -175,6 +177,18 @@ module Exportify
       puts "\nConfiguração salva em #{Config::CONFIG_PATH}"
     ensure
       tty&.close
+    end
+
+    def run_web(argv)
+      port = 4567
+
+      OptionParser.new do |opts|
+        opts.banner = 'Usage: exportify web [--port PORTA]'
+        opts.on('--port PORTA', Integer, 'Porta do servidor (padrão: 4567)') { |value| port = value }
+      end.parse!(argv)
+
+      require_relative 'web_server'
+      WebServer.start(port: port)
     end
 
     def open_tty

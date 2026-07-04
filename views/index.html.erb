@@ -1,0 +1,16 @@
+<% if playlists.empty? %>
+  <div class="empty-state">
+    <p>Nenhuma playlist baixada ainda.</p>
+    <p>Use <code>bin/exportify &lt;url_da_playlist&gt;</code> para baixar uma.</p>
+  </div>
+<% else %>
+  <div class="playlist-grid">
+    <% playlists.each do |playlist| %>
+      <a class="playlist-card" href="/playlists/<%= ERB::Util.url_encode(playlist[:name]) %>">
+        <div class="playlist-card__icon">&#9835;</div>
+        <div class="playlist-card__name"><%= ERB::Util.html_escape(playlist[:name]) %></div>
+        <div class="playlist-card__count"><%= playlist[:track_count] %> faixas</div>
+      </a>
+    <% end %>
+  </div>
+<% end %>

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'exportify/web_server'
 
 class CLITest < Minitest::Test
   def test_exits_without_playlist_url
@@ -205,5 +206,25 @@ class CLITest < Minitest::Test
     end
 
     assert_equal 'https://www.youtube.com/playlist?list=PL123', received_url
+  end
+
+  def test_web_subcommand_starts_server_with_default_port
+    called_with = nil
+
+    Exportify::WebServer.stub(:start, ->(port:) { called_with = port }) do
+      Exportify::CLI.run(['web'])
+    end
+
+    assert_equal 4567, called_with
+  end
+
+  def test_web_subcommand_accepts_custom_port
+    called_with = nil
+
+    Exportify::WebServer.stub(:start, ->(port:) { called_with = port }) do
+      Exportify::CLI.run(['web', '--port', '8080'])
+    end
+
+    assert_equal 8080, called_with
   end
 end

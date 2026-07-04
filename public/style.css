@@ -1,0 +1,150 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #FAFAFA;
+  color: #1A1A1A;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+a {
+  color: #2563EB;
+}
+
+a:hover {
+  color: #1D4ED8;
+}
+
+.breadcrumb {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6B7280;
+  padding: 4rem 1rem;
+}
+
+.empty-state code {
+  background: #E5E7EB;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  color: #1A1A1A;
+}
+
+.playlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.playlist-card {
+  display: block;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.playlist-card:hover {
+  border-color: #2563EB;
+}
+
+.playlist-card__icon {
+  font-size: 2rem;
+  color: #2563EB;
+  margin-bottom: 0.5rem;
+}
+
+.playlist-card__name {
+  font-weight: 600;
+}
+
+.playlist-card__count {
+  color: #6B7280;
+  font-size: 0.875rem;
+}
+
+.track-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid #E5E7EB;
+}
+
+.track-list__item {
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.track-list__link {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0.5rem;
+  text-decoration: none;
+  color: #1A1A1A;
+}
+
+.track-list__link:hover {
+  background: #F3F4F6;
+}
+
+.track-list__artist {
+  color: #6B7280;
+}
+
+.track-detail__title {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.track-detail__artist {
+  color: #2563EB;
+  font-weight: 500;
+  margin: 0 0 1.5rem;
+}
+
+.track-detail__player {
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.track-meta {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.track-meta__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.track-meta__label {
+  color: #6B7280;
+}
+
+.track-meta__value {
+  font-weight: 500;
+}
+
+.not-found {
+  text-align: center;
+  color: #6B7280;
+  padding: 4rem 1rem;
+}
