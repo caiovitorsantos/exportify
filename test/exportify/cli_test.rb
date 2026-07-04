@@ -151,4 +151,59 @@ class CLITest < Minitest::Test
   def test_source_for_returns_nil_for_unknown_domain
     assert_nil Exportify::CLI.source_for('https://example.com/whatever')
   end
+
+  def test_youtube_source_skips_spotify_credentials_check
+    require 'tmpdir'
+    ENV.delete('SPOTIFY_CLIENT_ID')
+    ENV.delete('SPOTIFY_CLIENT_SECRET')
+
+    fake_data = {
+      name: 'Minha Playlist',
+      tracks: [
+        { artist: 'Rick Astley', all_artists: 'Rick Astley', name: 'Never Gonna Give You Up',
+          raw_name: 'Never Gonna Give You Up', album: 'Minha Playlist', year: '', track_number: 1,
+          genre: '', video_id: 'vid1' }
+      ]
+    }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:load, -> { {} }) do
+        Exportify::Config.stub(:output_dir, dir) do
+          Exportify::YouTube.stub(:fetch_playlist, fake_data) do
+            Exportify::Downloader.stub(:download, true) do
+              Exportify::Tagger.stub(:tag, true) do
+                assert_output(/1 tracks found/) do
+                  Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123'])
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  ensure
+    ENV['SPOTIFY_CLIENT_ID']     = 'fake_id'
+    ENV['SPOTIFY_CLIENT_SECRET'] = 'fake_secret'
+  end
+
+  def test_youtube_url_query_string_is_not_stripped_before_fetch
+    require 'tmpdir'
+    received_url = nil
+    fake_data = { name: 'P', tracks: [] }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        fetch_stub = lambda do |url, **|
+          received_url = url
+          fake_data
+        end
+
+        Exportify::YouTube.stub(:fetch_playlist, fetch_stub) do
+          Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123'])
+        end
+      end
+    end
+
+    assert_equal 'https://www.youtube.com/playlist?list=PL123', received_url
+  end
 end
