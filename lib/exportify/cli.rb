@@ -166,5 +166,12 @@ module Exportify
         tty.gets.chomp
       end
     end
+
+    def source_for(url)
+      return :spotify if url.include?('open.spotify.com')
+      return :youtube if url.match?(%r{(music\.)?youtube\.com/playlist})
+
+      nil
+    end
   end
 end

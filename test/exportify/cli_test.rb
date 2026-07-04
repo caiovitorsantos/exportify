@@ -135,4 +135,20 @@ class CLITest < Minitest::Test
     assert sync
     assert_equal ['https://open.spotify.com/playlist/abc123'], argv
   end
+
+  def test_source_for_detects_spotify
+    assert_equal :spotify, Exportify::CLI.source_for('https://open.spotify.com/playlist/abc123')
+  end
+
+  def test_source_for_detects_youtube
+    assert_equal :youtube, Exportify::CLI.source_for('https://www.youtube.com/playlist?list=PL123')
+  end
+
+  def test_source_for_detects_youtube_music
+    assert_equal :youtube, Exportify::CLI.source_for('https://music.youtube.com/playlist?list=PL123')
+  end
+
+  def test_source_for_returns_nil_for_unknown_domain
+    assert_nil Exportify::CLI.source_for('https://example.com/whatever')
+  end
 end
