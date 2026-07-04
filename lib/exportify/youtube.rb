@@ -27,6 +27,50 @@ module Exportify
       }
     end
 
+    def fetch_video(url, browser: nil)
+      cmd = ['yt-dlp', '-J', '--no-warnings', url]
+      cmd += ['--cookies-from-browser', browser] if browser
+
+      stdout, stderr, status = Open3.capture3(*cmd)
+      abort "Erro ao acessar vídeo do YouTube: #{stderr.strip}" unless status.success?
+
+      data     = JSON.parse(stdout)
+      title    = data['title'] || 'YouTube Video'
+      chapters = data['chapters']
+
+      if chapters && !chapters.empty?
+        {
+          name: title,
+          tracks: chapters.each_with_index.map { |chapter, i| build_chapter_track(chapter, i, data) },
+          chaptered: true
+        }
+      else
+        {
+          name: title,
+          tracks: [build_track(data, 0, title)],
+          chaptered: false
+        }
+      end
+    end
+
+    def build_chapter_track(chapter, index, data)
+      artist, name = split_title(chapter['title'].to_s, data['uploader'] || data['channel'])
+
+      {
+        artist: artist,
+        all_artists: artist,
+        name: name,
+        raw_name: chapter['title'].to_s,
+        album: data['title'].to_s,
+        year: data['release_year'].to_s,
+        track_number: index + 1,
+        genre: '',
+        video_id: data['id'],
+        chapter_start: chapter['start_time'],
+        chapter_end: chapter['end_time']
+      }
+    end
+
     def build_track(entry, index, playlist_name)
       all_artists = entry['artist']
       name        = entry['track']

@@ -221,4 +221,81 @@ class YouTubeTest < Minitest::Test
     assert_includes received_args, '--cookies-from-browser'
     assert_includes received_args, 'chrome'
   end
+
+  def test_fetch_video_returns_chaptered_tracks_when_chapters_present
+    body = {
+      'id' => 'vid1',
+      'title' => 'Slow Touch Mix',
+      'uploader' => 'ChartHistories',
+      'chapters' => [
+        { 'title' => 'Aftersoft', 'start_time' => 0.0, 'end_time' => 171.0 },
+        { 'title' => 'Cloud Nine Room', 'start_time' => 171.0, 'end_time' => 372.0 }
+      ]
+    }.to_json
+
+    stub_yt_dlp(stdout: body) do
+      result = Exportify::YouTube.fetch_video('https://www.youtube.com/watch?v=vid1')
+
+      assert_equal 'Slow Touch Mix', result[:name]
+      assert result[:chaptered]
+      assert_equal 2, result[:tracks].size
+    end
+  end
+
+  def test_fetch_video_builds_chapter_track_fields
+    body = {
+      'id' => 'vid1',
+      'title' => 'Slow Touch Mix',
+      'uploader' => 'ChartHistories',
+      'chapters' => [
+        { 'title' => 'Aftersoft', 'start_time' => 0.0, 'end_time' => 171.0 }
+      ]
+    }.to_json
+
+    stub_yt_dlp(stdout: body) do
+      track = Exportify::YouTube.fetch_video('https://www.youtube.com/watch?v=vid1')[:tracks].first
+
+      expected = {
+        artist: 'ChartHistories',
+        all_artists: 'ChartHistories',
+        name: 'Aftersoft',
+        raw_name: 'Aftersoft',
+        album: 'Slow Touch Mix',
+        year: '',
+        track_number: 1,
+        genre: '',
+        video_id: 'vid1',
+        chapter_start: 0.0,
+        chapter_end: 171.0
+      }
+
+      assert_equal expected, track
+    end
+  end
+
+  def test_fetch_video_returns_single_track_without_chapters
+    body = {
+      'id' => 'vid1',
+      'title' => 'Rick Astley - Never Gonna Give You Up',
+      'uploader' => 'Rick Astley',
+      'chapters' => nil
+    }.to_json
+
+    stub_yt_dlp(stdout: body) do
+      result = Exportify::YouTube.fetch_video('https://www.youtube.com/watch?v=vid1')
+
+      refute result[:chaptered]
+      assert_equal 1, result[:tracks].size
+      assert_equal 'Rick Astley', result[:tracks].first[:artist]
+      assert_equal 'Never Gonna Give You Up', result[:tracks].first[:name]
+    end
+  end
+
+  def test_fetch_video_aborts_when_yt_dlp_fails
+    stub_yt_dlp(stdout: '', stderr: 'ERROR: Video unavailable', success: false) do
+      assert_output(nil, /Video unavailable/) do
+        assert_raises(SystemExit) { Exportify::YouTube.fetch_video('https://www.youtube.com/watch?v=vid1') }
+      end
+    end
+  end
 end
