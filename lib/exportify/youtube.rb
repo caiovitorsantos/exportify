@@ -8,13 +8,7 @@ module Exportify
     module_function
 
     def fetch_playlist(url, browser: nil)
-      cmd = ['yt-dlp', '-J', '--no-warnings', url]
-      cmd += ['--cookies-from-browser', browser] if browser
-
-      stdout, stderr, status = Open3.capture3(*cmd)
-      abort "Erro ao acessar playlist do YouTube: #{stderr.strip}" unless status.success?
-
-      data    = JSON.parse(stdout)
+      data    = fetch_yt_dlp_json(url, browser)
       entries = data['entries'] || []
       abort 'Playlist do YouTube vazia ou inacessível.' if entries.empty?
 
@@ -28,13 +22,7 @@ module Exportify
     end
 
     def fetch_video(url, browser: nil)
-      cmd = ['yt-dlp', '-J', '--no-warnings', url]
-      cmd += ['--cookies-from-browser', browser] if browser
-
-      stdout, stderr, status = Open3.capture3(*cmd)
-      abort "Erro ao acessar vídeo do YouTube: #{stderr.strip}" unless status.success?
-
-      data     = JSON.parse(stdout)
+      data     = fetch_yt_dlp_json(url, browser)
       title    = data['title'] || 'YouTube Video'
       chapters = data['chapters']
 
@@ -51,6 +39,20 @@ module Exportify
           chaptered: false
         }
       end
+    end
+
+    def fetch_yt_dlp_json(url, browser)
+      abort 'URL do YouTube inválida.' unless url.start_with?('http://', 'https://')
+      abort 'Nome de navegador inválido.' if browser&.start_with?('-')
+
+      cmd = ['yt-dlp', '-J', '--no-warnings']
+      cmd += ['--cookies-from-browser', browser] if browser
+      cmd += ['--', url]
+
+      stdout, stderr, status = Open3.capture3(*cmd)
+      abort "Erro ao acessar YouTube: #{stderr.strip}" unless status.success?
+
+      JSON.parse(stdout)
     end
 
     def build_chapter_track(chapter, index, data)

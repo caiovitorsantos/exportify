@@ -298,4 +298,48 @@ class YouTubeTest < Minitest::Test
       end
     end
   end
+
+  def test_fetch_playlist_rejects_url_without_http_scheme
+    assert_raises(SystemExit) { Exportify::YouTube.fetch_playlist('--exec=touch /tmp/pwned') }
+  end
+
+  def test_fetch_playlist_rejects_browser_starting_with_dash
+    assert_raises(SystemExit) do
+      Exportify::YouTube.fetch_playlist('https://www.youtube.com/playlist?list=PL123', browser: '--exec=evil')
+    end
+  end
+
+  def test_fetch_playlist_inserts_separator_before_url
+    body = { 'title' => 'P', 'entries' => [] }.to_json
+    received_args = nil
+
+    Open3.stub(
+      :capture3,
+      lambda { |*args|
+        received_args = args
+        [body, '', OpenStruct.new(success?: true)]
+      }
+    ) do
+      Exportify::YouTube.fetch_playlist('https://www.youtube.com/playlist?list=PL123')
+    rescue SystemExit
+      nil
+    end
+
+    dash_dash_index = received_args.index('--')
+    url_index = received_args.index('https://www.youtube.com/playlist?list=PL123')
+
+    assert dash_dash_index, 'esperava um separador -- no comando'
+    assert url_index, 'esperava a URL no comando'
+    assert_operator dash_dash_index, :<, url_index, '-- deve vir antes da URL'
+  end
+
+  def test_fetch_video_rejects_url_without_http_scheme
+    assert_raises(SystemExit) { Exportify::YouTube.fetch_video('--exec=touch /tmp/pwned') }
+  end
+
+  def test_fetch_video_rejects_browser_starting_with_dash
+    assert_raises(SystemExit) do
+      Exportify::YouTube.fetch_video('https://www.youtube.com/watch?v=vid1', browser: '--exec=evil')
+    end
+  end
 end
