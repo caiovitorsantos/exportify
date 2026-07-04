@@ -81,5 +81,31 @@ module Exportify
 
       { filename: filename, title: title, artist: artist, sort_key: number || Float::INFINITY }
     end
+
+    def track(playlist_name, filename)
+      dir = playlist_dir(playlist_name)
+      return nil unless dir
+      return nil unless Dir.children(dir).include?(filename)
+
+      filepath = File.join(dir, filename)
+      tags     = read_tags(filepath)
+      fallback = fallback_from_filename(filename)
+
+      {
+        title: presence(tags && tags[:title]) || fallback[:title],
+        artist: presence(tags && tags[:artist]) || fallback[:artist],
+        all_artists: presence(tags && tags[:all_artists]) || fallback[:artist],
+        album: presence(tags && tags[:album]),
+        year: presence(tags && tags[:year]),
+        track_number: presence(tags && tags[:track_number]),
+        genre: presence(tags && tags[:genre]),
+        duration_seconds: tags && tags[:duration_seconds],
+        file_size_bytes: File.size(filepath)
+      }
+    end
+
+    def presence(value)
+      value.to_s.strip.empty? ? nil : value
+    end
   end
 end

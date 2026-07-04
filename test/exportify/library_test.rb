@@ -164,4 +164,69 @@ class LibraryTest < Minitest::Test
       end
     end
   end
+
+  def test_track_returns_nil_for_unknown_playlist
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::Library.track('Unknown', 'song.mp3')
+      end
+    end
+  end
+
+  def test_track_returns_nil_for_unknown_file
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'Rock'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::Library.track('Rock', 'missing.mp3')
+      end
+    end
+  end
+
+  def test_track_returns_full_metadata
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      filepath = File.join(playlist_dir, 'Queen - Bohemian Rhapsody.mp3')
+      File.write(filepath, 'x' * 2048)
+
+      tags = {
+        title: 'Bohemian Rhapsody', artist: 'Queen', all_artists: 'Queen',
+        album: 'A Night at the Opera', year: '1975', track_number: '1',
+        genre: 'Rock', duration_seconds: 354.5
+      }
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, tags) do
+          result = Exportify::Library.track('Rock', 'Queen - Bohemian Rhapsody.mp3')
+
+          assert_equal 'Bohemian Rhapsody', result[:title]
+          assert_equal 'A Night at the Opera', result[:album]
+          assert_in_delta 354.5, result[:duration_seconds]
+          assert_equal 2048, result[:file_size_bytes]
+        end
+      end
+    end
+  end
+
+  def test_track_falls_back_when_tags_unavailable
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      filepath = File.join(playlist_dir, 'David Bowie - Heroes.mp3')
+      FileUtils.touch(filepath)
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, nil) do
+          result = Exportify::Library.track('Rock', 'David Bowie - Heroes.mp3')
+
+          assert_equal 'Heroes', result[:title]
+          assert_equal 'David Bowie', result[:artist]
+          assert_nil result[:album]
+          assert_nil result[:duration_seconds]
+          assert_equal 0, result[:file_size_bytes]
+        end
+      end
+    end
+  end
 end
