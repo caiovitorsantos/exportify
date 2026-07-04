@@ -8,6 +8,7 @@ Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, a
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — `brew install yt-dlp`
 - Python 3 + [mutagen](https://mutagen.readthedocs.io/) — `pip3 install mutagen`
 - A Spotify Developer application
+- Para playlists do YouTube/YouTube Music não é necessária nenhuma credencial adicional — só o `yt-dlp`.
 
 ## Setup
 
@@ -61,6 +62,21 @@ musics/
 ```
 
 Faixas que já existem no disco são ignoradas automaticamente. Rodar o comando novamente após adicionar músicas à playlist baixa apenas as novas.
+
+### Baixar uma playlist do YouTube ou YouTube Music
+
+```sh
+exportify https://www.youtube.com/playlist?list=<id>
+exportify https://music.youtube.com/playlist?list=<id>
+```
+
+Para playlists privadas, use `--browser` para reaproveitar os cookies de um navegador logado no YouTube:
+
+```sh
+exportify https://www.youtube.com/playlist?list=<id> --browser=chrome
+```
+
+Faixas do YouTube não têm artista/álbum/gênero estruturados como no Spotify: o nome do artista é extraído do padrão `"Artista - Título"` no título do vídeo (com fallback para o nome do canal), e o nome da playlist é usado como álbum. Os campos ano e gênero ficam em branco. As flags `--retag` e `--sync` funcionam da mesma forma que para playlists do Spotify.
 
 ### Sincronização bidirecional
 

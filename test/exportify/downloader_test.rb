@@ -57,4 +57,50 @@ class DownloaderTest < Minitest::Test
       assert result
     end
   end
+
+  def test_download_with_video_id_uses_direct_url
+    track = {
+      video_id: 'dQw4w9WgXcQ',
+      artist: 'Rick Astley',
+      all_artists: 'Rick Astley',
+      name: 'Never Gonna Give You Up',
+      raw_name: 'Never Gonna Give You Up'
+    }
+    received_args = nil
+
+    Exportify::Downloader.stub(
+      :system,
+      lambda { |*args|
+        received_args = args
+        true
+      }
+    ) do
+      Exportify::Downloader.download(track, '/tmp')
+    end
+
+    assert_includes received_args, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+    refute(received_args.any? { |a| a.to_s.start_with?('ytsearch1:') })
+  end
+
+  def test_download_without_video_id_uses_search
+    track = {
+      artist: 'Britney Spears',
+      all_artists: 'Britney Spears',
+      name: 'Womanizer',
+      raw_name: 'Womanizer'
+    }
+    received_args = nil
+
+    Exportify::Downloader.stub(
+      :system,
+      lambda { |*args|
+        received_args = args
+        true
+      }
+    ) do
+      Exportify::Downloader.download(track, '/tmp')
+    end
+
+    assert(received_args.any? { |a| a.to_s.start_with?('ytsearch1:') })
+  end
 end
