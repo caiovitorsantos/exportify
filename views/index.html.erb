@@ -8,7 +8,7 @@
     <% playlists.each do |playlist| %>
       <a class="playlist-card" href="/playlists/<%= ERB::Util.url_encode(playlist[:name]) %>">
         <div class="playlist-card__icon">&#9835;</div>
-        <div class="playlist-card__name"><%= playlist[:name] %></div>
+        <div class="playlist-card__name"><%= ERB::Util.html_escape(playlist[:name]) %></div>
         <div class="playlist-card__count"><%= playlist[:track_count] %> faixas</div>
       </a>
     <% end %>

@@ -76,6 +76,12 @@ class LibraryTest < Minitest::Test
     end
   end
 
+  def test_read_tags_returns_nil_when_python3_missing
+    Open3.stub(:capture3, ->(*) { raise Errno::ENOENT }) do
+      assert_nil Exportify::Library.read_tags('/tmp/song.mp3')
+    end
+  end
+
   def test_read_tags_script_includes_filepath
     script = nil
     status = OpenStruct.new(success?: true)
@@ -88,6 +94,26 @@ class LibraryTest < Minitest::Test
     end
 
     assert_includes script, '/tmp/my song.mp3'
+  end
+
+  def test_playlist_dir_returns_nil_when_entry_is_not_a_directory
+    Dir.mktmpdir do |dir|
+      FileUtils.touch(File.join(dir, 'Not A Playlist'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::Library.playlist_dir('Not A Playlist')
+      end
+    end
+  end
+
+  def test_tracks_returns_nil_when_playlist_name_matches_a_regular_file
+    Dir.mktmpdir do |dir|
+      FileUtils.touch(File.join(dir, 'Not A Playlist'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::Library.tracks('Not A Playlist')
+      end
+    end
   end
 
   def test_tracks_returns_nil_for_unknown_playlist

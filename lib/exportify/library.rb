@@ -42,7 +42,7 @@ module Exportify
       return nil unless status.success?
 
       JSON.parse(stdout, symbolize_names: true)
-    rescue JSON::ParserError
+    rescue JSON::ParserError, Errno::ENOENT
       nil
     end
 
@@ -51,7 +51,10 @@ module Exportify
       return nil unless Dir.exist?(root)
       return nil unless Dir.children(root).include?(playlist_name)
 
-      File.join(root, playlist_name)
+      dir = File.join(root, playlist_name)
+      return nil unless File.directory?(dir)
+
+      dir
     end
 
     def fallback_from_filename(filename)
