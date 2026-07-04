@@ -5,6 +5,14 @@ Todas as mudanças notáveis deste projeto são documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+### Added
+
+- Suporte a download de playlists do YouTube e YouTube Music (além do
+  Spotify), incluindo playlists privadas via `--browser` (cookies do
+  navegador).
+
 ## [1.0.1] - 2026-07-03
 
 ### Added
