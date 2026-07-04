@@ -1,0 +1,13 @@
+<a class="breadcrumb" href="/">&larr; Playlists</a>
+<h1><%= playlist_name %></h1>
+<ul class="track-list">
+  <% tracks.each do |track| %>
+    <li class="track-list__item">
+      <a class="track-list__link"
+         href="/playlists/<%= ERB::Util.url_encode(playlist_name) %>/faixas/<%= ERB::Util.url_encode(track[:filename]) %>">
+        <span><%= track[:title] %></span>
+        <span class="track-list__artist"><%= track[:artist] %></span>
+      </a>
+    </li>
+  <% end %>
+</ul>

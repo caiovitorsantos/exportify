@@ -55,4 +55,24 @@ class WebServerTest < Minitest::Test
       assert_equal '404', response.code
     end
   end
+
+  def test_get_playlist_lists_tracks
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock"))
+
+      assert_equal '200', response.code
+      assert_includes response.body, 'Bohemian Rhapsody'
+    end
+  end
+
+  def test_get_unknown_playlist_returns404
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Unknown"))
+
+      assert_equal '404', response.code
+    end
+  end
 end

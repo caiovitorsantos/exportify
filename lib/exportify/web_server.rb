@@ -36,6 +36,8 @@ module Exportify
       case req.path
       when '/'
         render_index(res)
+      when %r{\A/playlists/([^/]+)\z}
+        render_playlist(res, URI.decode_www_form_component(Regexp.last_match(1)))
       else
         render_not_found(res)
       end
@@ -44,6 +46,14 @@ module Exportify
     def render_index(res)
       res['Content-Type'] = 'text/html; charset=utf-8'
       res.body = render_template('index', playlists: Library.playlists)
+    end
+
+    def render_playlist(res, name)
+      tracks = Library.tracks(name)
+      return render_not_found(res, 'Playlist não encontrada.') unless tracks
+
+      res['Content-Type'] = 'text/html; charset=utf-8'
+      res.body = render_template('playlist', playlist_name: name, tracks: tracks)
     end
 
     def render_not_found(res, message = 'Página não encontrada.')
