@@ -144,6 +144,62 @@ class YouTubeTest < Minitest::Test
     end
   end
 
+  def test_fetch_playlist_uses_structured_metadata_when_present
+    body = {
+      'title' => 'Minha Playlist',
+      'entries' => [
+        {
+          'id' => 'vid1',
+          'title' => 'Just Dance',
+          'uploader' => 'Lady Gaga',
+          'artist' => "Lady Gaga, Colby O'Donis",
+          'track' => 'Just Dance',
+          'album' => 'The Fame',
+          'release_year' => 2008,
+          'playlist_index' => 1
+        }
+      ]
+    }.to_json
+
+    stub_yt_dlp(stdout: body) do
+      track = Exportify::YouTube.fetch_playlist('https://www.youtube.com/playlist?list=PL123')[:tracks].first
+
+      expected = {
+        artist: 'Lady Gaga',
+        all_artists: "Lady Gaga, Colby O'Donis",
+        name: 'Just Dance',
+        raw_name: 'Just Dance',
+        album: 'The Fame',
+        year: '2008',
+        track_number: 1,
+        genre: '',
+        video_id: 'vid1'
+      }
+
+      assert_equal expected, track
+    end
+  end
+
+  def test_fetch_playlist_does_not_use_flat_playlist_flag
+    body = {
+      'title' => 'Minha Playlist',
+      'entries' => [{ 'id' => 'vid1', 'title' => 'A - B', 'uploader' => 'X' }]
+    }.to_json
+    received_args = nil
+
+    Open3.stub(
+      :capture3,
+      lambda { |*args|
+        received_args = args
+        [body, '', OpenStruct.new(success?: true)]
+      }
+    ) do
+      Exportify::YouTube.fetch_playlist('https://www.youtube.com/playlist?list=PL123')
+    end
+
+    refute_includes received_args, '--flat-playlist'
+  end
+
   def test_fetch_playlist_uses_cookies_from_browser_when_given
     body = {
       'title' => 'Minha Playlist',

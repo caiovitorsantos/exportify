@@ -8,7 +8,7 @@ module Exportify
     module_function
 
     def fetch_playlist(url, browser: nil)
-      cmd = ['yt-dlp', '--flat-playlist', '-J', '--no-warnings', url]
+      cmd = ['yt-dlp', '-J', '--no-warnings', url]
       cmd += ['--cookies-from-browser', browser] if browser
 
       stdout, stderr, status = Open3.capture3(*cmd)
@@ -28,16 +28,23 @@ module Exportify
     end
 
     def build_track(entry, index, playlist_name)
-      artist, name = split_title(entry['title'].to_s, entry['uploader'] || entry['channel'])
+      all_artists = entry['artist']
+      name        = entry['track']
+
+      if all_artists.nil? || name.nil?
+        fallback_artist, fallback_name = split_title(entry['title'].to_s, entry['uploader'] || entry['channel'])
+        all_artists ||= fallback_artist
+        name        ||= fallback_name
+      end
 
       {
-        artist: artist,
-        all_artists: artist,
+        artist: all_artists.to_s.split(',').first.to_s.strip,
+        all_artists: all_artists,
         name: name,
         raw_name: entry['title'].to_s,
-        album: playlist_name,
-        year: '',
-        track_number: index + 1,
+        album: entry['album'] || playlist_name,
+        year: entry['release_year'].to_s,
+        track_number: entry['playlist_index'] || (index + 1),
         genre: '',
         video_id: entry['id']
       }
