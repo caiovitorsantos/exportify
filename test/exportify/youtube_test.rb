@@ -60,12 +60,19 @@ class YouTubeTest < Minitest::Test
     stub_yt_dlp(stdout: body) do
       track = Exportify::YouTube.fetch_playlist('https://www.youtube.com/playlist?list=PL123')[:tracks].first
 
-      assert_equal 'Rick Astley', track[:artist]
-      assert_equal 'Rick Astley', track[:all_artists]
-      assert_equal 'Never Gonna Give You Up', track[:name]
-      assert_equal 'Rick Astley - Never Gonna Give You Up', track[:raw_name]
-      assert_equal 'Minha Playlist', track[:album]
-      assert_equal 'vid1', track[:video_id]
+      expected = {
+        artist: 'Rick Astley',
+        all_artists: 'Rick Astley',
+        name: 'Never Gonna Give You Up',
+        raw_name: 'Rick Astley - Never Gonna Give You Up',
+        album: 'Minha Playlist',
+        year: '',
+        track_number: 1,
+        genre: '',
+        video_id: 'vid1'
+      }
+
+      assert_equal expected, track
     end
   end
 
