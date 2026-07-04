@@ -45,5 +45,41 @@ module Exportify
     rescue JSON::ParserError
       nil
     end
+
+    def playlist_dir(playlist_name)
+      root = File.expand_path(Config.output_dir)
+      return nil unless Dir.exist?(root)
+      return nil unless Dir.children(root).include?(playlist_name)
+
+      File.join(root, playlist_name)
+    end
+
+    def fallback_from_filename(filename)
+      base = File.basename(filename, '.mp3')
+      artist, title = base.split(' - ', 2)
+      { artist: artist || base, title: title || base }
+    end
+
+    def tracks(playlist_name)
+      dir = playlist_dir(playlist_name)
+      return nil unless dir
+
+      Dir.glob(File.join(dir, '*.mp3'))
+         .map { |filepath| track_summary(filepath) }
+         .sort_by { |summary| [summary[:sort_key], summary[:filename]] }
+         .each { |summary| summary.delete(:sort_key) }
+    end
+
+    def track_summary(filepath)
+      filename = File.basename(filepath)
+      tags     = read_tags(filepath)
+      fallback = fallback_from_filename(filename)
+
+      title  = tags && !tags[:title].to_s.strip.empty? ? tags[:title] : fallback[:title]
+      artist = tags && !tags[:artist].to_s.strip.empty? ? tags[:artist] : fallback[:artist]
+      number = tags && tags[:track_number].to_s[/\d+/]&.to_i
+
+      { filename: filename, title: title, artist: artist, sort_key: number || Float::INFINITY }
+    end
   end
 end

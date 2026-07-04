@@ -89,4 +89,79 @@ class LibraryTest < Minitest::Test
 
     assert_includes script, '/tmp/my song.mp3'
   end
+
+  def test_tracks_returns_nil_for_unknown_playlist
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::Library.tracks('Does Not Exist')
+      end
+    end
+  end
+
+  def test_tracks_lists_files_with_metadata
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'Queen - Bohemian Rhapsody.mp3'))
+
+      tags = { title: 'Bohemian Rhapsody', artist: 'Queen', track_number: '1' }
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, tags) do
+          result = Exportify::Library.tracks('Rock')
+
+          assert_equal(
+            [{ filename: 'Queen - Bohemian Rhapsody.mp3', title: 'Bohemian Rhapsody', artist: 'Queen' }],
+            result
+          )
+        end
+      end
+    end
+  end
+
+  def test_tracks_falls_back_to_filename_when_tags_missing
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'David Bowie - Heroes.mp3'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, nil) do
+          result = Exportify::Library.tracks('Rock')
+
+          assert_equal(
+            [{ filename: 'David Bowie - Heroes.mp3', title: 'Heroes', artist: 'David Bowie' }],
+            result
+          )
+        end
+      end
+    end
+  end
+
+  def test_tracks_sorted_by_track_number_with_missing_last
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'B - Second.mp3'))
+      FileUtils.touch(File.join(playlist_dir, 'A - First.mp3'))
+      FileUtils.touch(File.join(playlist_dir, 'Z - NoNumber.mp3'))
+
+      by_filename = {
+        'B - Second.mp3' => { track_number: '2' },
+        'A - First.mp3' => { track_number: '1' },
+        'Z - NoNumber.mp3' => {}
+      }
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, ->(filepath) { by_filename[File.basename(filepath)] }) do
+          result = Exportify::Library.tracks('Rock')
+
+          assert_equal(
+            ['A - First.mp3', 'B - Second.mp3', 'Z - NoNumber.mp3'],
+            result.map { |t| t[:filename] }
+          )
+        end
+      end
+    end
+  end
 end
