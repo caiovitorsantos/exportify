@@ -36,6 +36,12 @@ module Exportify
       case req.path
       when '/'
         render_index(res)
+      when %r{\A/playlists/([^/]+)/faixas/([^/]+)\z}
+        render_track(
+          res,
+          URI.decode_www_form_component(Regexp.last_match(1)),
+          URI.decode_www_form_component(Regexp.last_match(2))
+        )
       when %r{\A/playlists/([^/]+)\z}
         render_playlist(res, URI.decode_www_form_component(Regexp.last_match(1)))
       else
@@ -54,6 +60,38 @@ module Exportify
 
       res['Content-Type'] = 'text/html; charset=utf-8'
       res.body = render_template('playlist', playlist_name: name, tracks: tracks)
+    end
+
+    def render_track(res, playlist_name, filename)
+      track = Library.track(playlist_name, filename)
+      return render_not_found(res, 'Faixa não encontrada.') unless track
+
+      res['Content-Type'] = 'text/html; charset=utf-8'
+      res.body = render_template(
+        'track',
+        playlist_name: playlist_name,
+        filename: filename,
+        track: track,
+        duration: format_duration(track[:duration_seconds]),
+        file_size: format_file_size(track[:file_size_bytes])
+      )
+    end
+
+    def format_duration(seconds)
+      return '—' unless seconds
+
+      total = seconds.round
+      format('%<minute>d:%<second>02d', minute: total / 60, second: total % 60)
+    end
+
+    def format_file_size(bytes)
+      return '—' unless bytes
+
+      if bytes >= 1_048_576
+        format('%.1f MB', bytes / 1_048_576.0)
+      else
+        format('%.1f KB', bytes / 1024.0)
+      end
     end
 
     def render_not_found(res, message = 'Página não encontrada.')

@@ -75,4 +75,48 @@ class WebServerTest < Minitest::Test
       assert_equal '404', response.code
     end
   end
+
+  def test_format_duration_formats_minutes_and_seconds
+    assert_equal '5:54', Exportify::WebServer.format_duration(354.4)
+  end
+
+  def test_format_duration_returns_dash_for_nil
+    assert_equal '—', Exportify::WebServer.format_duration(nil)
+  end
+
+  def test_format_file_size_formats_kilobytes
+    assert_equal '2.0 KB', Exportify::WebServer.format_file_size(2048)
+  end
+
+  def test_format_file_size_formats_megabytes
+    assert_equal '2.0 MB', Exportify::WebServer.format_file_size(2 * 1_048_576)
+  end
+
+  def test_format_file_size_returns_dash_for_nil
+    assert_equal '—', Exportify::WebServer.format_file_size(nil)
+  end
+
+  def test_get_track_shows_details_and_player
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      url = URI("http://127.0.0.1:#{port}/playlists/Rock/faixas/Queen%20-%20Bohemian%20Rhapsody.mp3")
+      response = Net::HTTP.get_response(url)
+
+      assert_equal '200', response.code
+      assert_includes response.body, 'Bohemian Rhapsody'
+      assert_includes response.body, '<audio'
+    end
+  end
+
+  def test_get_unknown_track_returns_404 # rubocop:disable Naming/VariableNumber
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock/faixas/missing.mp3"))
+
+      assert_equal '404', response.code
+    end
+  end
 end

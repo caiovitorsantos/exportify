@@ -1,0 +1,33 @@
+<a class="breadcrumb" href="/playlists/<%= ERB::Util.url_encode(playlist_name) %>">&larr; <%= playlist_name %></a>
+<h1 class="track-detail__title"><%= track[:title] %></h1>
+<p class="track-detail__artist"><%= track[:artist] %></p>
+
+<audio class="track-detail__player" controls
+       src="/library/<%= ERB::Util.url_encode(playlist_name) %>/<%= ERB::Util.url_encode(filename) %>"></audio>
+
+<ul class="track-meta">
+  <li class="track-meta__row">
+    <span class="track-meta__label">Álbum</span>
+    <span class="track-meta__value"><%= track[:album] || '—' %></span>
+  </li>
+  <li class="track-meta__row">
+    <span class="track-meta__label">Ano</span>
+    <span class="track-meta__value"><%= track[:year] || '—' %></span>
+  </li>
+  <li class="track-meta__row">
+    <span class="track-meta__label">Faixa nº</span>
+    <span class="track-meta__value"><%= track[:track_number] || '—' %></span>
+  </li>
+  <li class="track-meta__row">
+    <span class="track-meta__label">Gênero</span>
+    <span class="track-meta__value"><%= track[:genre] || '—' %></span>
+  </li>
+  <li class="track-meta__row">
+    <span class="track-meta__label">Duração</span>
+    <span class="track-meta__value"><%= duration %></span>
+  </li>
+  <li class="track-meta__row">
+    <span class="track-meta__label">Tamanho</span>
+    <span class="track-meta__value"><%= file_size %></span>
+  </li>
+</ul>
