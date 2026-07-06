@@ -67,7 +67,7 @@ module Exportify
       puts "Output: #{output_dir}\n\n"
 
       if chaptered
-        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir, retag: retag)
+        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir, retag: retag, browser: browser)
         ok     = result[:ok]
         skip   = result[:skip]
         failed = result[:failed]
@@ -152,7 +152,7 @@ module Exportify
       [name, tracks]
     end
 
-    def download_chaptered_video(data, output_dir, retag: false)
+    def download_chaptered_video(data, output_dir, retag: false, browser: nil)
       tracks = data[:tracks]
       expected_files = tracks.map do |track|
         "#{Downloader.sanitize(track[:artist])} - #{Downloader.sanitize(track[:name])}.mp3"
@@ -179,10 +179,12 @@ module Exportify
         return { ok: 0, skip: tracks.size, failed: 0 }
       end
 
+      abort 'Nome de navegador inválido.' if browser&.start_with?('-')
+
       video_id  = tracks.first[:video_id]
       video_url = "https://www.youtube.com/watch?v=#{video_id}"
 
-      success = system(
+      cmd = [
         'yt-dlp', video_url,
         '--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0',
         '--split-chapters',
@@ -190,24 +192,28 @@ module Exportify
         '--output', 'chapter:%(section_number)s - %(section_title)s.%(ext)s',
         '--output', '%(title)s.%(ext)s',
         '--no-warnings', '--quiet'
-      )
+      ]
+      cmd += ['--cookies-from-browser', browser] if browser
+
+      success = system(*cmd)
 
       return { ok: 0, skip: 0, failed: tracks.size } unless success
 
       ok = 0
 
       tracks.each_with_index do |track, i|
-        source_file = Dir.glob(File.join(output_dir, "#{i + 1} - *.mp3")).first
-        next unless source_file
+        source_name = Dir.glob("#{i + 1} - *.mp3", base: output_dir).first
+        next unless source_name
 
+        source_file = File.join(output_dir, source_name)
         target_file = File.join(output_dir, expected_files[i])
         File.rename(source_file, target_file)
         Tagger.tag(target_file, track)
         ok += 1
       end
 
-      Dir.glob(File.join(output_dir, '*.mp3')).each do |file|
-        File.delete(file) unless expected_files.include?(File.basename(file))
+      Dir.glob('*.mp3', base: output_dir).each do |name|
+        File.delete(File.join(output_dir, name)) unless expected_files.include?(name)
       end
 
       { ok: ok, skip: 0, failed: tracks.size - ok }

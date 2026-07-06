@@ -369,4 +369,75 @@ class CLITest < Minitest::Test
       end
     end
   end
+
+  def test_download_chaptered_video_handles_brackets_in_output_dir_name
+    require 'tmpdir'
+
+    Dir.mktmpdir do |base|
+      dir = File.join(base, 'Lofi Hip Hop Mix [2024] {Full Album}')
+      FileUtils.mkdir_p(dir)
+
+      tracks = [
+        { artist: 'Lofi Girl', name: 'Track One', video_id: 'vid1' },
+        { artist: 'Lofi Girl', name: 'Track Two', video_id: 'vid1' }
+      ]
+      result = nil
+
+      Exportify::CLI.stub(
+        :system,
+        lambda { |*_args|
+          FileUtils.touch(File.join(dir, '1 - Track One.mp3'))
+          FileUtils.touch(File.join(dir, '2 - Track Two.mp3'))
+          FileUtils.touch(File.join(dir, 'Full Video.mp3'))
+          true
+        }
+      ) do
+        Exportify::Tagger.stub(:tag, true) do
+          result = Exportify::CLI.download_chaptered_video({ name: 'Full Video', tracks: tracks }, dir)
+        end
+      end
+
+      assert_equal({ ok: 2, skip: 0, failed: 0 }, result)
+      assert_path_exists File.join(dir, 'Lofi Girl - Track One.mp3')
+      assert_path_exists File.join(dir, 'Lofi Girl - Track Two.mp3')
+      refute_path_exists File.join(dir, 'Full Video.mp3')
+    end
+  end
+
+  def test_download_chaptered_video_threads_browser_to_yt_dlp
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [{ artist: 'Channel', name: 'Song A', video_id: 'vid1' }]
+      received_args = nil
+
+      Exportify::CLI.stub(
+        :system,
+        lambda { |*args|
+          received_args = args
+          FileUtils.touch(File.join(dir, '1 - Song A.mp3'))
+          true
+        }
+      ) do
+        Exportify::Tagger.stub(:tag, true) do
+          Exportify::CLI.download_chaptered_video({ name: 'V', tracks: tracks }, dir, browser: 'chrome')
+        end
+      end
+
+      assert_includes received_args, '--cookies-from-browser'
+      assert_includes received_args, 'chrome'
+    end
+  end
+
+  def test_download_chaptered_video_rejects_browser_starting_with_dash
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [{ artist: 'Channel', name: 'Song A', video_id: 'vid1' }]
+
+      assert_raises(SystemExit) do
+        Exportify::CLI.download_chaptered_video({ name: 'V', tracks: tracks }, dir, browser: '--exec=evil')
+      end
+    end
+  end
 end

@@ -76,7 +76,9 @@ Para playlists privadas, use `--browser` para reaproveitar os cookies de um nave
 exportify https://www.youtube.com/playlist?list=<id> --browser=chrome
 ```
 
-Faixas do YouTube não têm artista/álbum/gênero estruturados como no Spotify: o nome do artista é extraído do padrão `"Artista - Título"` no título do vídeo (com fallback para o nome do canal), e o nome da playlist é usado como álbum. Os campos ano e gênero ficam em branco. As flags `--retag` e `--sync` funcionam da mesma forma que para playlists do Spotify.
+Quando o vídeo tem metadado oficial (YouTube Music / Content ID), artista, álbum e ano são extraídos diretamente; caso contrário, o artista é extraído do padrão `"Artista - Título"` no título do vídeo (com fallback para o nome do canal), e o nome da playlist é usado como álbum. O campo gênero sempre fica em branco (o YouTube não expõe esse dado). As flags `--retag` e `--sync` funcionam da mesma forma que para playlists do Spotify.
+
+> **Nota:** para obter esses metadados completos, a busca da playlist não usa mais o modo "flat" do yt-dlp, o que torna a listagem de playlists grandes (centenas de faixas) mais lenta — o yt-dlp precisa resolver os metadados de cada vídeo antes de começar a baixar.
 
 ### Baixar um vídeo único do YouTube (com capítulos)
 
