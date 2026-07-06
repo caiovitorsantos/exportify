@@ -206,6 +206,7 @@ module Exportify
     def source_for(url)
       return :spotify if url.include?('open.spotify.com')
       return :youtube if url.match?(%r{(music\.)?youtube\.com/playlist})
+      return :youtube_video if url.match?(%r{(music\.)?youtube\.com/watch}) && url.match?(/[?&]v=/)
 
       nil
     end

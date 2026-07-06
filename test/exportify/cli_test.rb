@@ -153,6 +153,18 @@ class CLITest < Minitest::Test
     assert_nil Exportify::CLI.source_for('https://example.com/whatever')
   end
 
+  def test_source_for_detects_youtube_video
+    assert_equal :youtube_video, Exportify::CLI.source_for('https://www.youtube.com/watch?v=abc123')
+  end
+
+  def test_source_for_detects_youtube_video_with_mix_list_param
+    assert_equal :youtube_video, Exportify::CLI.source_for('https://www.youtube.com/watch?v=abc123&list=RDabc123')
+  end
+
+  def test_source_for_returns_nil_for_watch_url_without_v_param
+    assert_nil Exportify::CLI.source_for('https://www.youtube.com/watch?list=PL123')
+  end
+
   def test_youtube_source_skips_spotify_credentials_check
     require 'tmpdir'
     ENV.delete('SPOTIFY_CLIENT_ID')
