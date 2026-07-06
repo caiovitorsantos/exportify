@@ -151,3 +151,4 @@ Veja o [CHANGELOG.md](CHANGELOG.md) para o histórico de versões.
 
 - O token OAuth é cacheado em `~/.exportify_token.json` e renovado automaticamente quando expira. Se a sessão for revogada, o arquivo é removido e um novo login é solicitado.
 - Playlists de artistas oficiais ou gravadoras podem retornar erro 403 — isso é uma restrição da API do Spotify para apps de terceiros sem acesso estendido.
+- A dependência `webrick` (usada só para o servidor local de callback OAuth do login com Spotify) tem uma vulnerabilidade conhecida sem patch disponível ainda ([CVE-2026-38969](https://nvd.nist.gov/vuln/detail/CVE-2026-38969), request smuggling). O risco prático é baixo aqui: o servidor roda só em `127.0.0.1`, atende uma única requisição do próprio navegador do usuário durante o login, e não fica atrás de nenhum proxy — não há a cadeia proxy→backend que esse tipo de ataque explora. Reavaliar quando uma versão corrigida do `webrick` for lançada.
