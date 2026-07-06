@@ -8,7 +8,7 @@ Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, a
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — `brew install yt-dlp`
 - Python 3 + [mutagen](https://mutagen.readthedocs.io/) — `pip3 install mutagen`
 - A Spotify Developer application
-- Para playlists do YouTube/YouTube Music não é necessária nenhuma credencial adicional — só o `yt-dlp`.
+- Para playlists ou vídeos únicos do YouTube/YouTube Music não é necessária nenhuma credencial adicional — só o `yt-dlp`.
 
 ## Setup
 
@@ -77,6 +77,14 @@ exportify https://www.youtube.com/playlist?list=<id> --browser=chrome
 ```
 
 Faixas do YouTube não têm artista/álbum/gênero estruturados como no Spotify: o nome do artista é extraído do padrão `"Artista - Título"` no título do vídeo (com fallback para o nome do canal), e o nome da playlist é usado como álbum. Os campos ano e gênero ficam em branco. As flags `--retag` e `--sync` funcionam da mesma forma que para playlists do Spotify.
+
+### Baixar um vídeo único do YouTube (com capítulos)
+
+```sh
+exportify "https://www.youtube.com/watch?v=<id>"
+```
+
+Se o vídeo tiver capítulos declarados (comum em mixes e compilações, onde cada capítulo marca o início de uma música), o exportify baixa o vídeo uma única vez e separa automaticamente em um MP3 por capítulo, com artista extraído do título do capítulo (padrão `"Artista - Título"`, com fallback para o canal) e álbum = título do vídeo. Sem capítulos, baixa como uma faixa única. As flags `--retag`, `--sync` e `--browser` funcionam da mesma forma que para playlists.
 
 ### Sincronização bidirecional
 

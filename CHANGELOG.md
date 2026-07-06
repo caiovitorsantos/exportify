@@ -12,6 +12,9 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Suporte a download de playlists do YouTube e YouTube Music (além do
   Spotify), incluindo playlists privadas via `--browser` (cookies do
   navegador).
+- Suporte a download de um vídeo único do YouTube com corte automático por
+  capítulos (um MP3 por capítulo, com tags ID3 corretas); sem capítulos,
+  baixa como uma faixa única.
 
 ## [1.0.1] - 2026-07-03
 
