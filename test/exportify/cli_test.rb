@@ -239,4 +239,81 @@ class CLITest < Minitest::Test
 
     assert_equal 8080, called_with
   end
+
+  def test_download_chaptered_video_skips_when_all_files_exist
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [
+        { artist: 'Channel', name: 'Song A', video_id: 'vid1' },
+        { artist: 'Channel', name: 'Song B', video_id: 'vid1' }
+      ]
+      FileUtils.touch(File.join(dir, 'Channel - Song A.mp3'))
+      FileUtils.touch(File.join(dir, 'Channel - Song B.mp3'))
+
+      result = nil
+      Exportify::CLI.stub(:system, ->(*_args) { raise 'yt-dlp não deveria ser chamado' }) do
+        result = Exportify::CLI.download_chaptered_video({ name: 'Video Title', tracks: tracks }, dir)
+      end
+
+      assert_equal({ ok: 0, skip: 2, failed: 0 }, result)
+    end
+  end
+
+  def test_download_chaptered_video_downloads_renames_tags_and_cleans_up
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [
+        { artist: 'Lady Gaga', name: 'Aftersoft', video_id: 'vid1' },
+        { artist: 'Lady Gaga', name: 'Cloud Nine Room', video_id: 'vid1' }
+      ]
+      result = nil
+
+      Exportify::CLI.stub(
+        :system,
+        lambda { |*_args|
+          FileUtils.touch(File.join(dir, '1 - Aftersoft.mp3'))
+          FileUtils.touch(File.join(dir, '2 - Cloud Nine Room.mp3'))
+          FileUtils.touch(File.join(dir, 'Full Video Title.mp3'))
+          true
+        }
+      ) do
+        Exportify::Tagger.stub(:tag, true) do
+          result = Exportify::CLI.download_chaptered_video({ name: 'Full Video Title', tracks: tracks }, dir)
+        end
+      end
+
+      assert_equal({ ok: 2, skip: 0, failed: 0 }, result)
+      assert_path_exists File.join(dir, 'Lady Gaga - Aftersoft.mp3')
+      assert_path_exists File.join(dir, 'Lady Gaga - Cloud Nine Room.mp3')
+      refute_path_exists File.join(dir, 'Full Video Title.mp3')
+    end
+  end
+
+  def test_download_chaptered_video_retag_mode_tags_existing_files_only
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [
+        { artist: 'Lady Gaga', name: 'Aftersoft', video_id: 'vid1' },
+        { artist: 'Lady Gaga', name: 'Missing Track', video_id: 'vid1' }
+      ]
+      FileUtils.touch(File.join(dir, 'Lady Gaga - Aftersoft.mp3'))
+
+      result = nil
+      tagged = []
+
+      Exportify::Tagger.stub(:tag, ->(path, _track) { tagged << path }) do
+        Exportify::CLI.stub(:system, ->(*_args) { raise 'yt-dlp não deveria ser chamado em modo retag' }) do
+          result = Exportify::CLI.download_chaptered_video(
+            { name: 'Full Video Title', tracks: tracks }, dir, retag: true
+          )
+        end
+      end
+
+      assert_equal({ ok: 1, skip: 1, failed: 0 }, result)
+      assert_equal [File.join(dir, 'Lady Gaga - Aftersoft.mp3')], tagged
+    end
+  end
 end
