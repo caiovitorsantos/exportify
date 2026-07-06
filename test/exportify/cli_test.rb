@@ -316,4 +316,57 @@ class CLITest < Minitest::Test
       assert_equal [File.join(dir, 'Lady Gaga - Aftersoft.mp3')], tagged
     end
   end
+
+  def test_youtube_video_source_with_chapters_calls_download_chaptered_video
+    require 'tmpdir'
+
+    fake_data = {
+      name: 'Some Video',
+      tracks: [
+        { artist: 'Channel', name: 'Song A', video_id: 'vid1', chapter_start: 0.0, chapter_end: 10.0 }
+      ],
+      chaptered: true
+    }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_video, fake_data) do
+          fake_download = ->(_data, _output_dir, **) { { ok: 1, skip: 0, failed: 0 } }
+
+          Exportify::CLI.stub(:download_chaptered_video, fake_download) do
+            assert_output(/1 tracks found/) do
+              Exportify::CLI.run(['https://www.youtube.com/watch?v=vid1'])
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def test_youtube_video_source_without_chapters_uses_standard_loop
+    require 'tmpdir'
+
+    fake_data = {
+      name: 'Some Video',
+      tracks: [
+        { artist: 'Channel', name: 'Song A', video_id: 'vid1', all_artists: 'Channel', raw_name: 'Song A',
+          album: 'Some Video', year: '', track_number: 1, genre: '' }
+      ],
+      chaptered: false
+    }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_video, fake_data) do
+          Exportify::Downloader.stub(:download, true) do
+            Exportify::Tagger.stub(:tag, true) do
+              assert_output(/1 tracks found/) do
+                Exportify::CLI.run(['https://www.youtube.com/watch?v=vid1'])
+              end
+            end
+          end
+        end
+      end
+    end
+  end
 end

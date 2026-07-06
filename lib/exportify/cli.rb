@@ -27,7 +27,7 @@ module Exportify
         opts.banner = "Usage:\n  " \
                       "exportify init\n  " \
                       "exportify web [--port PORTA]\n  " \
-                      'exportify <playlist_url> [--retag] [--sync] [--browser=NOME]'
+                      'exportify <playlist_or_video_url> [--retag] [--sync] [--browser=NOME]'
         opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
         opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
         opts.on('--browser=NOME', 'Navegador para extrair cookies (playlists privadas do YouTube)') do |b|
@@ -44,12 +44,18 @@ module Exportify
       abort 'Invalid playlist URL' unless source
 
       puts 'Fetching playlist...'
+      chaptered = false
+
       name, tracks =
         case source
         when :spotify
           fetch_spotify_playlist(url)
         when :youtube
           data = YouTube.fetch_playlist(url, browser: browser)
+          [data[:name], data[:tracks]]
+        when :youtube_video
+          data = YouTube.fetch_video(url, browser: browser)
+          chaptered = data[:chaptered]
           [data[:name], data[:tracks]]
         end
 
@@ -60,42 +66,49 @@ module Exportify
       puts "#{tracks.size} tracks found"
       puts "Output: #{output_dir}\n\n"
 
-      ok = skip = failed = 0
+      if chaptered
+        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir, retag: retag)
+        ok     = result[:ok]
+        skip   = result[:skip]
+        failed = result[:failed]
+      else
+        ok = skip = failed = 0
 
-      tracks.each_with_index do |track, i|
-        artist   = Downloader.sanitize(track[:artist])
-        name     = Downloader.sanitize(track[:name])
-        filename = "#{artist} - #{name}.mp3"
-        filepath = File.join(output_dir, filename)
+        tracks.each_with_index do |track, i|
+          artist   = Downloader.sanitize(track[:artist])
+          name     = Downloader.sanitize(track[:name])
+          filename = "#{artist} - #{name}.mp3"
+          filepath = File.join(output_dir, filename)
 
-        print "[#{i + 1}/#{tracks.size}] #{filename} "
+          print "[#{i + 1}/#{tracks.size}] #{filename} "
 
-        if retag
+          if retag
+            if File.exist?(filepath)
+              Tagger.tag(filepath, track)
+              puts '(retagged)'
+              ok += 1
+            else
+              puts '(not found, skipping)'
+              skip += 1
+            end
+            next
+          end
+
           if File.exist?(filepath)
+            puts '(already exists, skipping)'
+            skip += 1
+            next
+          end
+
+          puts '(downloading...)'
+          success = Downloader.download(track, output_dir)
+
+          if success && File.exist?(filepath)
             Tagger.tag(filepath, track)
-            puts '(retagged)'
             ok += 1
           else
-            puts '(not found, skipping)'
-            skip += 1
+            failed += 1
           end
-          next
-        end
-
-        if File.exist?(filepath)
-          puts '(already exists, skipping)'
-          skip += 1
-          next
-        end
-
-        puts '(downloading...)'
-        success = Downloader.download(track, output_dir)
-
-        if success && File.exist?(filepath)
-          Tagger.tag(filepath, track)
-          ok += 1
-        else
-          failed += 1
         end
       end
 
