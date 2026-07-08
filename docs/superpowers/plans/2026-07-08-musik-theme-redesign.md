@@ -1198,7 +1198,7 @@ Expected: FAIL — `response.body` não contém `class="cover cover--card"`
          data-search-text="<%= ERB::Util.html_escape(playlist[:name]) %>">
         <div class="cover cover--card"
              style="background: linear-gradient(135deg, <%= cover[:from] %>, <%= cover[:to] %>)">
-          <%= cover[:initial] %>
+          <%= ERB::Util.html_escape(cover[:initial]) %>
         </div>
         <div class="playlist-card__name"><%= ERB::Util.html_escape(playlist[:name]) %></div>
         <div class="playlist-card__count"><%= playlist[:track_count] %> faixas</div>
@@ -1304,7 +1304,7 @@ por:
           <span class="chart-list__index"><%= index + 1 %></span>
           <div class="cover cover--sm"
                style="background: linear-gradient(135deg, <%= cover[:from] %>, <%= cover[:to] %>)">
-            <%= cover[:initial] %>
+            <%= ERB::Util.html_escape(cover[:initial]) %>
           </div>
           <span class="chart-list__info">
             <span class="chart-list__title"><%= ERB::Util.html_escape(track[:title]) %></span>
@@ -1396,7 +1396,7 @@ Expected: FAIL — `response.body` não contém `cover--lg`
 <% cover = Exportify::Cover.for("#{track[:artist]} - #{track[:title]}") %>
 <div class="cover cover--lg"
      style="background: linear-gradient(135deg, <%= cover[:from] %>, <%= cover[:to] %>)">
-  <%= cover[:initial] %>
+  <%= ERB::Util.html_escape(cover[:initial]) %>
 </div>
 
 <h1 class="track-detail__title"><%= ERB::Util.html_escape(track[:title]) %></h1>
