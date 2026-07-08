@@ -12,7 +12,7 @@
          data-search-text="<%= ERB::Util.html_escape(playlist[:name]) %>">
         <div class="cover cover--card"
              style="background: linear-gradient(135deg, <%= cover[:from] %>, <%= cover[:to] %>)">
-          <%= cover[:initial] %>
+          <%= ERB::Util.html_escape(cover[:initial]) %>
         </div>
         <div class="playlist-card__name"><%= ERB::Util.html_escape(playlist[:name]) %></div>
         <div class="playlist-card__count"><%= playlist[:track_count] %> faixas</div>
