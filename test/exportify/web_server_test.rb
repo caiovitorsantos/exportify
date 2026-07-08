@@ -48,6 +48,18 @@ class WebServerTest < Minitest::Test
     end
   end
 
+  def test_get_root_renders_generated_cover_and_search_text
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
+
+      assert_includes response.body, 'class="cover cover--card"'
+      assert_includes response.body, 'data-search-text="Rock"'
+    end
+  end
+
   def test_get_root_shows_empty_state_when_no_playlists
     with_server do |port|
       response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
