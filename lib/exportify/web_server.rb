@@ -5,6 +5,7 @@ require 'erb'
 require 'uri'
 require_relative 'library'
 require_relative 'config'
+require_relative 'cover'
 
 module Exportify
   module WebServer
@@ -113,6 +114,7 @@ module Exportify
 
     class TemplateContext
       def initialize(locals)
+        @locals = locals
         locals.each_key do |key|
           instance_variable_set(:"@#{key}", locals[key])
           define_singleton_method(key) { instance_variable_get(:"@#{key}") }
@@ -121,6 +123,10 @@ module Exportify
 
       def template_binding
         binding
+      end
+
+      def render_partial(name)
+        WebServer.render_erb("_#{name}.html.erb", @locals)
       end
     end
   end

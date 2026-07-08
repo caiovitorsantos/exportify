@@ -39,6 +39,15 @@ class WebServerTest < Minitest::Test
     end
   end
 
+  def test_get_root_renders_sidebar_and_topbar
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
+
+      assert_includes response.body, 'class="sidebar"'
+      assert_includes response.body, 'id="search-input"'
+    end
+  end
+
   def test_get_root_shows_empty_state_when_no_playlists
     with_server do |port|
       response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
