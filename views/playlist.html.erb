@@ -1,13 +1,38 @@
 <a class="breadcrumb" href="/">&larr; Playlists</a>
 <h1><%= ERB::Util.html_escape(playlist_name) %></h1>
-<ul class="track-list">
-  <% tracks.each do |track| %>
-    <li class="track-list__item">
-      <a class="track-list__link"
-         href="/playlists/<%= ERB::Util.url_encode(playlist_name) %>/faixas/<%= ERB::Util.url_encode(track[:filename]) %>">
-        <span><%= ERB::Util.html_escape(track[:title]) %></span>
-        <span class="track-list__artist"><%= ERB::Util.html_escape(track[:artist]) %></span>
-      </a>
-    </li>
+
+<div class="playlist-layout">
+  <ol class="chart-list" id="search-container">
+    <% tracks.each_with_index do |track, index| %>
+      <% cover = Exportify::Cover.for("#{track[:artist]} - #{track[:title]}") %>
+      <li class="chart-list__item">
+        <a class="chart-list__link"
+           href="/playlists/<%= ERB::Util.url_encode(playlist_name) %>/faixas/<%= ERB::Util.url_encode(track[:filename]) %>"
+           data-search-text="<%= ERB::Util.html_escape("#{track[:title]} #{track[:artist]} #{track[:genre]}") %>">
+          <span class="chart-list__index"><%= index + 1 %></span>
+          <div class="cover cover--sm"
+               style="background: linear-gradient(135deg, <%= cover[:from] %>, <%= cover[:to] %>)">
+            <%= ERB::Util.html_escape(cover[:initial]) %>
+          </div>
+          <span class="chart-list__info">
+            <span class="chart-list__title"><%= ERB::Util.html_escape(track[:title]) %></span>
+            <span class="chart-list__artist"><%= ERB::Util.html_escape(track[:artist]) %></span>
+          </span>
+        </a>
+      </li>
+    <% end %>
+  </ol>
+
+  <% if genres.any? %>
+    <aside class="aside">
+      <span class="aside__title">Gêneros</span>
+      <div class="genre-pills">
+        <% genres.each do |genre| %>
+          <button type="button" class="genre-pill" data-genre="<%= ERB::Util.html_escape(genre) %>">
+            <%= ERB::Util.html_escape(genre) %>
+          </button>
+        <% end %>
+      </div>
+    </aside>
   <% end %>
-</ul>
+</div>

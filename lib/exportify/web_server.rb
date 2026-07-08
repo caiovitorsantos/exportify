@@ -60,7 +60,7 @@ module Exportify
       return render_not_found(res, 'Playlist não encontrada.') unless tracks
 
       res['Content-Type'] = 'text/html; charset=utf-8'
-      res.body = render_template('playlist', playlist_name: name, tracks: tracks)
+      res.body = render_template('playlist', playlist_name: name, tracks: tracks, genres: Library.genres(name))
     end
 
     def render_track(res, playlist_name, filename)

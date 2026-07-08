@@ -89,6 +89,18 @@ class WebServerTest < Minitest::Test
     end
   end
 
+  def test_get_playlist_renders_chart_list_with_numbered_index
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock"))
+
+      assert_includes response.body, 'class="chart-list"'
+      assert_includes response.body, 'chart-list__index'
+    end
+  end
+
   def test_get_unknown_playlist_returns404
     with_server do |port|
       response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Unknown"))
