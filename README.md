@@ -8,7 +8,7 @@ Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, a
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — `brew install yt-dlp`
 - Python 3 + [mutagen](https://mutagen.readthedocs.io/) — `pip3 install mutagen`
 - A Spotify Developer application
-- Para playlists do YouTube/YouTube Music não é necessária nenhuma credencial adicional — só o `yt-dlp`.
+- Para playlists ou vídeos únicos do YouTube/YouTube Music não é necessária nenhuma credencial adicional — só o `yt-dlp`.
 
 ## Setup
 
@@ -76,7 +76,17 @@ Para playlists privadas, use `--browser` para reaproveitar os cookies de um nave
 exportify https://www.youtube.com/playlist?list=<id> --browser=chrome
 ```
 
-Faixas do YouTube não têm artista/álbum/gênero estruturados como no Spotify: o nome do artista é extraído do padrão `"Artista - Título"` no título do vídeo (com fallback para o nome do canal), e o nome da playlist é usado como álbum. Os campos ano e gênero ficam em branco. As flags `--retag` e `--sync` funcionam da mesma forma que para playlists do Spotify.
+Quando o vídeo tem metadado oficial (YouTube Music / Content ID), artista, álbum e ano são extraídos diretamente; caso contrário, o artista é extraído do padrão `"Artista - Título"` no título do vídeo (com fallback para o nome do canal), e o nome da playlist é usado como álbum. O campo gênero sempre fica em branco (o YouTube não expõe esse dado). As flags `--retag` e `--sync` funcionam da mesma forma que para playlists do Spotify.
+
+> **Nota:** para obter esses metadados completos, a busca da playlist não usa mais o modo "flat" do yt-dlp, o que torna a listagem de playlists grandes (centenas de faixas) mais lenta — o yt-dlp precisa resolver os metadados de cada vídeo antes de começar a baixar.
+
+### Baixar um vídeo único do YouTube (com capítulos)
+
+```sh
+exportify "https://www.youtube.com/watch?v=<id>"
+```
+
+Se o vídeo tiver capítulos declarados (comum em mixes e compilações, onde cada capítulo marca o início de uma música), o exportify baixa o vídeo uma única vez e separa automaticamente em um MP3 por capítulo, com artista extraído do título do capítulo (padrão `"Artista - Título"`, com fallback para o canal) e álbum = título do vídeo. Sem capítulos, baixa como uma faixa única. As flags `--retag`, `--sync` e `--browser` funcionam da mesma forma que para playlists.
 
 ### Sincronização bidirecional
 
@@ -143,3 +153,4 @@ Veja o [CHANGELOG.md](CHANGELOG.md) para o histórico de versões.
 
 - O token OAuth é cacheado em `~/.exportify_token.json` e renovado automaticamente quando expira. Se a sessão for revogada, o arquivo é removido e um novo login é solicitado.
 - Playlists de artistas oficiais ou gravadoras podem retornar erro 403 — isso é uma restrição da API do Spotify para apps de terceiros sem acesso estendido.
+- A dependência `webrick` (usada só para o servidor local de callback OAuth do login com Spotify) tem uma vulnerabilidade conhecida sem patch disponível ainda ([CVE-2026-38969](https://nvd.nist.gov/vuln/detail/CVE-2026-38969), request smuggling). O risco prático é baixo aqui: o servidor roda só em `127.0.0.1`, atende uma única requisição do próprio navegador do usuário durante o login, e não fica atrás de nenhum proxy — não há a cadeia proxy→backend que esse tipo de ataque explora. Reavaliar quando uma versão corrigida do `webrick` for lançada.

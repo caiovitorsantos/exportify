@@ -1,0 +1,7 @@
+---
+ignore:
+  # webrick request-smuggling (sem patch disponível). Uso restrito ao servidor
+  # local de callback OAuth (127.0.0.1, uma única requisição por login, sem
+  # proxy reverso na frente) — risco prático baixo nesse contexto. Ver README,
+  # seção "Notas". Reavaliar quando um patch for lançado.
+  - CVE-2026-38969

@@ -27,7 +27,7 @@ module Exportify
         opts.banner = "Usage:\n  " \
                       "exportify init\n  " \
                       "exportify web [--port PORTA]\n  " \
-                      'exportify <playlist_url> [--retag] [--sync] [--browser=NOME]'
+                      'exportify <playlist_or_video_url> [--retag] [--sync] [--browser=NOME]'
         opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
         opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
         opts.on('--browser=NOME', 'Navegador para extrair cookies (playlists privadas do YouTube)') do |b|
@@ -44,12 +44,18 @@ module Exportify
       abort 'Invalid playlist URL' unless source
 
       puts 'Fetching playlist...'
+      chaptered = false
+
       name, tracks =
         case source
         when :spotify
           fetch_spotify_playlist(url)
         when :youtube
           data = YouTube.fetch_playlist(url, browser: browser)
+          [data[:name], data[:tracks]]
+        when :youtube_video
+          data = YouTube.fetch_video(url, browser: browser)
+          chaptered = data[:chaptered]
           [data[:name], data[:tracks]]
         end
 
@@ -60,42 +66,49 @@ module Exportify
       puts "#{tracks.size} tracks found"
       puts "Output: #{output_dir}\n\n"
 
-      ok = skip = failed = 0
+      if chaptered
+        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir, retag: retag, browser: browser)
+        ok     = result[:ok]
+        skip   = result[:skip]
+        failed = result[:failed]
+      else
+        ok = skip = failed = 0
 
-      tracks.each_with_index do |track, i|
-        artist   = Downloader.sanitize(track[:artist])
-        name     = Downloader.sanitize(track[:name])
-        filename = "#{artist} - #{name}.mp3"
-        filepath = File.join(output_dir, filename)
+        tracks.each_with_index do |track, i|
+          artist   = Downloader.sanitize(track[:artist])
+          name     = Downloader.sanitize(track[:name])
+          filename = "#{artist} - #{name}.mp3"
+          filepath = File.join(output_dir, filename)
 
-        print "[#{i + 1}/#{tracks.size}] #{filename} "
+          print "[#{i + 1}/#{tracks.size}] #{filename} "
 
-        if retag
+          if retag
+            if File.exist?(filepath)
+              Tagger.tag(filepath, track)
+              puts '(retagged)'
+              ok += 1
+            else
+              puts '(not found, skipping)'
+              skip += 1
+            end
+            next
+          end
+
           if File.exist?(filepath)
+            puts '(already exists, skipping)'
+            skip += 1
+            next
+          end
+
+          puts '(downloading...)'
+          success = Downloader.download(track, output_dir)
+
+          if success && File.exist?(filepath)
             Tagger.tag(filepath, track)
-            puts '(retagged)'
             ok += 1
           else
-            puts '(not found, skipping)'
-            skip += 1
+            failed += 1
           end
-          next
-        end
-
-        if File.exist?(filepath)
-          puts '(already exists, skipping)'
-          skip += 1
-          next
-        end
-
-        puts '(downloading...)'
-        success = Downloader.download(track, output_dir)
-
-        if success && File.exist?(filepath)
-          Tagger.tag(filepath, track)
-          ok += 1
-        else
-          failed += 1
         end
       end
 
@@ -137,6 +150,73 @@ module Exportify
       tracks = Spotify.playlist_tracks(playlist_id, token)
       tracks = Spotify.enrich_with_genres(tracks, token)
       [name, tracks]
+    end
+
+    def download_chaptered_video(data, output_dir, retag: false, browser: nil)
+      tracks = data[:tracks]
+      expected_files = tracks.map do |track|
+        "#{Downloader.sanitize(track[:artist])} - #{Downloader.sanitize(track[:name])}.mp3"
+      end
+
+      if retag
+        ok = skip = 0
+
+        tracks.each_with_index do |track, i|
+          filepath = File.join(output_dir, expected_files[i])
+
+          if File.exist?(filepath)
+            Tagger.tag(filepath, track)
+            ok += 1
+          else
+            skip += 1
+          end
+        end
+
+        return { ok: ok, skip: skip, failed: 0 }
+      end
+
+      if expected_files.all? { |f| File.exist?(File.join(output_dir, f)) }
+        return { ok: 0, skip: tracks.size, failed: 0 }
+      end
+
+      abort 'Nome de navegador inválido.' if browser&.start_with?('-')
+
+      video_id  = tracks.first[:video_id]
+      video_url = "https://www.youtube.com/watch?v=#{video_id}"
+
+      cmd = [
+        'yt-dlp', video_url,
+        '--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0',
+        '--split-chapters',
+        '--paths', output_dir,
+        '--output', 'chapter:%(section_number)s - %(section_title)s.%(ext)s',
+        '--output', '%(title)s.%(ext)s',
+        '--no-warnings', '--quiet'
+      ]
+      cmd += ['--cookies-from-browser', browser] if browser
+
+      success = system(*cmd)
+
+      return { ok: 0, skip: 0, failed: tracks.size } unless success
+
+      ok = 0
+
+      tracks.each_with_index do |track, i|
+        source_name = Dir.glob("#{i + 1} - *.mp3", base: output_dir).first
+        next unless source_name
+
+        source_file = File.join(output_dir, source_name)
+        target_file = File.join(output_dir, expected_files[i])
+        File.rename(source_file, target_file)
+        Tagger.tag(target_file, track)
+        ok += 1
+      end
+
+      Dir.glob('*.mp3', base: output_dir).each do |name|
+        File.delete(File.join(output_dir, name)) unless expected_files.include?(name)
+      end
+
+      { ok: ok, skip: 0, failed: tracks.size - ok }
     end
 
     def run_init(dir = nil)
@@ -206,6 +286,7 @@ module Exportify
     def source_for(url)
       return :spotify if url.include?('open.spotify.com')
       return :youtube if url.match?(%r{(music\.)?youtube\.com/playlist})
+      return :youtube_video if url.match?(%r{(music\.)?youtube\.com/watch}) && url.match?(/[?&]v=/)
 
       nil
     end

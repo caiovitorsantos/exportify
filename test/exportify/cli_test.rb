@@ -153,6 +153,18 @@ class CLITest < Minitest::Test
     assert_nil Exportify::CLI.source_for('https://example.com/whatever')
   end
 
+  def test_source_for_detects_youtube_video
+    assert_equal :youtube_video, Exportify::CLI.source_for('https://www.youtube.com/watch?v=abc123')
+  end
+
+  def test_source_for_detects_youtube_video_with_mix_list_param
+    assert_equal :youtube_video, Exportify::CLI.source_for('https://www.youtube.com/watch?v=abc123&list=RDabc123')
+  end
+
+  def test_source_for_returns_nil_for_watch_url_without_v_param
+    assert_nil Exportify::CLI.source_for('https://www.youtube.com/watch?list=PL123')
+  end
+
   def test_youtube_source_skips_spotify_credentials_check
     require 'tmpdir'
     ENV.delete('SPOTIFY_CLIENT_ID')
@@ -226,5 +238,206 @@ class CLITest < Minitest::Test
     end
 
     assert_equal 8080, called_with
+  end
+
+  def test_download_chaptered_video_skips_when_all_files_exist
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [
+        { artist: 'Channel', name: 'Song A', video_id: 'vid1' },
+        { artist: 'Channel', name: 'Song B', video_id: 'vid1' }
+      ]
+      FileUtils.touch(File.join(dir, 'Channel - Song A.mp3'))
+      FileUtils.touch(File.join(dir, 'Channel - Song B.mp3'))
+
+      result = nil
+      Exportify::CLI.stub(:system, ->(*_args) { raise 'yt-dlp não deveria ser chamado' }) do
+        result = Exportify::CLI.download_chaptered_video({ name: 'Video Title', tracks: tracks }, dir)
+      end
+
+      assert_equal({ ok: 0, skip: 2, failed: 0 }, result)
+    end
+  end
+
+  def test_download_chaptered_video_downloads_renames_tags_and_cleans_up
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [
+        { artist: 'Lady Gaga', name: 'Aftersoft', video_id: 'vid1' },
+        { artist: 'Lady Gaga', name: 'Cloud Nine Room', video_id: 'vid1' }
+      ]
+      result = nil
+
+      Exportify::CLI.stub(
+        :system,
+        lambda { |*_args|
+          FileUtils.touch(File.join(dir, '1 - Aftersoft.mp3'))
+          FileUtils.touch(File.join(dir, '2 - Cloud Nine Room.mp3'))
+          FileUtils.touch(File.join(dir, 'Full Video Title.mp3'))
+          true
+        }
+      ) do
+        Exportify::Tagger.stub(:tag, true) do
+          result = Exportify::CLI.download_chaptered_video({ name: 'Full Video Title', tracks: tracks }, dir)
+        end
+      end
+
+      assert_equal({ ok: 2, skip: 0, failed: 0 }, result)
+      assert_path_exists File.join(dir, 'Lady Gaga - Aftersoft.mp3')
+      assert_path_exists File.join(dir, 'Lady Gaga - Cloud Nine Room.mp3')
+      refute_path_exists File.join(dir, 'Full Video Title.mp3')
+    end
+  end
+
+  def test_download_chaptered_video_retag_mode_tags_existing_files_only
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [
+        { artist: 'Lady Gaga', name: 'Aftersoft', video_id: 'vid1' },
+        { artist: 'Lady Gaga', name: 'Missing Track', video_id: 'vid1' }
+      ]
+      FileUtils.touch(File.join(dir, 'Lady Gaga - Aftersoft.mp3'))
+
+      result = nil
+      tagged = []
+
+      Exportify::Tagger.stub(:tag, ->(path, _track) { tagged << path }) do
+        Exportify::CLI.stub(:system, ->(*_args) { raise 'yt-dlp não deveria ser chamado em modo retag' }) do
+          result = Exportify::CLI.download_chaptered_video(
+            { name: 'Full Video Title', tracks: tracks }, dir, retag: true
+          )
+        end
+      end
+
+      assert_equal({ ok: 1, skip: 1, failed: 0 }, result)
+      assert_equal [File.join(dir, 'Lady Gaga - Aftersoft.mp3')], tagged
+    end
+  end
+
+  def test_youtube_video_source_with_chapters_calls_download_chaptered_video
+    require 'tmpdir'
+
+    fake_data = {
+      name: 'Some Video',
+      tracks: [
+        { artist: 'Channel', name: 'Song A', video_id: 'vid1', chapter_start: 0.0, chapter_end: 10.0 }
+      ],
+      chaptered: true
+    }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_video, fake_data) do
+          fake_download = ->(_data, _output_dir, **) { { ok: 1, skip: 0, failed: 0 } }
+
+          Exportify::CLI.stub(:download_chaptered_video, fake_download) do
+            assert_output(/1 tracks found/) do
+              Exportify::CLI.run(['https://www.youtube.com/watch?v=vid1'])
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def test_youtube_video_source_without_chapters_uses_standard_loop
+    require 'tmpdir'
+
+    fake_data = {
+      name: 'Some Video',
+      tracks: [
+        { artist: 'Channel', name: 'Song A', video_id: 'vid1', all_artists: 'Channel', raw_name: 'Song A',
+          album: 'Some Video', year: '', track_number: 1, genre: '' }
+      ],
+      chaptered: false
+    }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_video, fake_data) do
+          Exportify::Downloader.stub(:download, true) do
+            Exportify::Tagger.stub(:tag, true) do
+              assert_output(/1 tracks found/) do
+                Exportify::CLI.run(['https://www.youtube.com/watch?v=vid1'])
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def test_download_chaptered_video_handles_brackets_in_output_dir_name
+    require 'tmpdir'
+
+    Dir.mktmpdir do |base|
+      dir = File.join(base, 'Lofi Hip Hop Mix [2024] {Full Album}')
+      FileUtils.mkdir_p(dir)
+
+      tracks = [
+        { artist: 'Lofi Girl', name: 'Track One', video_id: 'vid1' },
+        { artist: 'Lofi Girl', name: 'Track Two', video_id: 'vid1' }
+      ]
+      result = nil
+
+      Exportify::CLI.stub(
+        :system,
+        lambda { |*_args|
+          FileUtils.touch(File.join(dir, '1 - Track One.mp3'))
+          FileUtils.touch(File.join(dir, '2 - Track Two.mp3'))
+          FileUtils.touch(File.join(dir, 'Full Video.mp3'))
+          true
+        }
+      ) do
+        Exportify::Tagger.stub(:tag, true) do
+          result = Exportify::CLI.download_chaptered_video({ name: 'Full Video', tracks: tracks }, dir)
+        end
+      end
+
+      assert_equal({ ok: 2, skip: 0, failed: 0 }, result)
+      assert_path_exists File.join(dir, 'Lofi Girl - Track One.mp3')
+      assert_path_exists File.join(dir, 'Lofi Girl - Track Two.mp3')
+      refute_path_exists File.join(dir, 'Full Video.mp3')
+    end
+  end
+
+  def test_download_chaptered_video_threads_browser_to_yt_dlp
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [{ artist: 'Channel', name: 'Song A', video_id: 'vid1' }]
+      received_args = nil
+
+      Exportify::CLI.stub(
+        :system,
+        lambda { |*args|
+          received_args = args
+          FileUtils.touch(File.join(dir, '1 - Song A.mp3'))
+          true
+        }
+      ) do
+        Exportify::Tagger.stub(:tag, true) do
+          Exportify::CLI.download_chaptered_video({ name: 'V', tracks: tracks }, dir, browser: 'chrome')
+        end
+      end
+
+      assert_includes received_args, '--cookies-from-browser'
+      assert_includes received_args, 'chrome'
+    end
+  end
+
+  def test_download_chaptered_video_rejects_browser_starting_with_dash
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      tracks = [{ artist: 'Channel', name: 'Song A', video_id: 'vid1' }]
+
+      assert_raises(SystemExit) do
+        Exportify::CLI.download_chaptered_video({ name: 'V', tracks: tracks }, dir, browser: '--exec=evil')
+      end
+    end
   end
 end
