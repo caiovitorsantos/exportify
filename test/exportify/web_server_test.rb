@@ -128,4 +128,12 @@ class WebServerTest < Minitest::Test
       assert_equal '404', response.code
     end
   end
+
+  def test_get_style_css_is_served
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/assets/style.css"))
+
+      assert_equal '200', response.code
+    end
+  end
 end
