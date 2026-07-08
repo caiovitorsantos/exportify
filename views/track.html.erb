@@ -1,6 +1,13 @@
 <a class="breadcrumb" href="/playlists/<%= ERB::Util.url_encode(playlist_name) %>">
   &larr; <%= ERB::Util.html_escape(playlist_name) %>
 </a>
+
+<% cover = Exportify::Cover.for("#{track[:artist]} - #{track[:title]}") %>
+<div class="cover cover--lg"
+     style="background: linear-gradient(135deg, <%= cover[:from] %>, <%= cover[:to] %>)">
+  <%= ERB::Util.html_escape(cover[:initial]) %>
+</div>
+
 <h1 class="track-detail__title"><%= ERB::Util.html_escape(track[:title]) %></h1>
 <p class="track-detail__artist"><%= ERB::Util.html_escape(track[:artist]) %></p>
 

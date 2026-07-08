@@ -143,6 +143,18 @@ class WebServerTest < Minitest::Test
     end
   end
 
+  def test_get_track_renders_large_cover
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      url = URI("http://127.0.0.1:#{port}/playlists/Rock/faixas/Queen%20-%20Bohemian%20Rhapsody.mp3")
+      response = Net::HTTP.get_response(url)
+
+      assert_includes response.body, 'cover--lg'
+    end
+  end
+
   def test_get_unknown_track_returns_404 # rubocop:disable Naming/VariableNumber
     FileUtils.mkdir_p(File.join(@dir, 'Rock'))
 
