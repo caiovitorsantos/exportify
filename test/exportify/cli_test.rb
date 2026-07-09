@@ -370,6 +370,39 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_youtube_video_source_without_chapters_threads_browser_to_downloader
+    require 'tmpdir'
+
+    fake_data = {
+      name: 'Some Video',
+      tracks: [
+        { artist: 'Channel', name: 'Song A', video_id: 'vid1', all_artists: 'Channel', raw_name: 'Song A',
+          album: 'Some Video', year: '', track_number: 1, genre: '' }
+      ],
+      chaptered: false
+    }
+    received_browser = :not_called
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_video, fake_data) do
+          download_stub = lambda { |_track, _output_dir, browser: nil|
+            received_browser = browser
+            true
+          }
+
+          Exportify::Downloader.stub(:download, download_stub) do
+            Exportify::Tagger.stub(:tag, true) do
+              Exportify::CLI.run(['https://www.youtube.com/watch?v=vid1', '--browser=safari'])
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 'safari', received_browser
+  end
+
   def test_download_chaptered_video_handles_brackets_in_output_dir_name
     require 'tmpdir'
 

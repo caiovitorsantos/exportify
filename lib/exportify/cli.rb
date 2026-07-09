@@ -101,7 +101,7 @@ module Exportify
           end
 
           puts '(downloading...)'
-          success = Downloader.download(track, output_dir)
+          success = Downloader.download(track, output_dir, browser: browser)
 
           if success && File.exist?(filepath)
             Tagger.tag(filepath, track)
