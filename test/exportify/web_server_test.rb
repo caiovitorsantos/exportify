@@ -204,6 +204,18 @@ class WebServerTest < Minitest::Test
     end
   end
 
+  def test_post_playlists_rejects_url_starting_with_dash
+    with_server do |port|
+      Exportify::Jobs.stub(:start, ->(_cmd) { flunk 'Jobs.start should not have been called' }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists")
+        response = Net::HTTP.post_form(uri, 'url' => '-fopen.spotify.com/playlist/xyz')
+
+        assert_equal '400', response.code
+        assert JSON.parse(response.body)['error']
+      end
+    end
+  end
+
   def test_post_playlists_threads_url_and_browser_into_command
     received_cmd = nil
 
@@ -317,6 +329,20 @@ class WebServerTest < Minitest::Test
     end
 
     assert_includes received_cmd, 'https://open.spotify.com/playlist/xyz'
+  end
+
+  def test_post_retag_without_stored_source_rejects_url_starting_with_dash
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+
+    with_server do |port|
+      Exportify::Jobs.stub(:start, ->(_cmd) { flunk 'Jobs.start should not have been called' }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists/Rock/retag")
+        response = Net::HTTP.post_form(uri, 'url' => '-x')
+
+        assert_equal '400', response.code
+        assert JSON.parse(response.body)['error']
+      end
+    end
   end
 
   def test_post_retag_without_stored_source_or_url_param_returns422

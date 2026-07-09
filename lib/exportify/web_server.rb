@@ -78,6 +78,8 @@ module Exportify
       return render_json(res, 400, error: 'URL inválida. Use um link de playlist do Spotify ou YouTube.') \
         unless CLI.source_for(url)
 
+      return render_json(res, 400, error: 'URL inválida.') if url.start_with?('-')
+
       browser = Library.presence(req.query['browser'])
       cmd = [RbConfig.ruby, EXPORTIFY_BIN, url]
       cmd << "--browser=#{browser}" if browser
@@ -92,6 +94,7 @@ module Exportify
       url = source ? source[:url] : Library.presence(req.query['url'])
 
       return render_json(res, 422, error: 'Informe a URL de origem desta playlist.') unless url
+      return render_json(res, 400, error: 'URL inválida.') if url.start_with?('-')
 
       browser = source ? source[:browser] : nil
       cmd = [RbConfig.ruby, EXPORTIFY_BIN, url, flag]
