@@ -5,6 +5,7 @@ require 'exportify/web_server'
 require 'net/http'
 require 'tmpdir'
 require 'fileutils'
+require 'json'
 
 class WebServerTest < Minitest::Test
   def setup
@@ -178,6 +179,80 @@ class WebServerTest < Minitest::Test
       response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/assets/app.js"))
 
       assert_equal '200', response.code
+    end
+  end
+
+  def test_post_playlists_creates_job_for_valid_url
+    with_server do |port|
+      Exportify::Jobs.stub(:start, ->(_cmd) { 'job123' }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists")
+        response = Net::HTTP.post_form(uri, 'url' => 'https://open.spotify.com/playlist/abc123')
+
+        assert_equal '202', response.code
+        assert_equal({ 'job_id' => 'job123' }, JSON.parse(response.body))
+      end
+    end
+  end
+
+  def test_post_playlists_rejects_invalid_url
+    with_server do |port|
+      uri = URI("http://127.0.0.1:#{port}/playlists")
+      response = Net::HTTP.post_form(uri, 'url' => 'https://example.com/whatever')
+
+      assert_equal '400', response.code
+      assert JSON.parse(response.body)['error']
+    end
+  end
+
+  def test_post_playlists_threads_url_and_browser_into_command
+    received_cmd = nil
+
+    with_server do |port|
+      Exportify::Jobs.stub(:start, lambda { |cmd|
+        received_cmd = cmd
+        'job123'
+      }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists")
+        Net::HTTP.post_form(uri, 'url' => 'https://open.spotify.com/playlist/abc123', 'browser' => 'chrome')
+      end
+    end
+
+    assert_includes received_cmd, 'https://open.spotify.com/playlist/abc123'
+    assert_includes received_cmd, '--browser=chrome'
+  end
+
+  def test_post_playlists_omits_browser_flag_when_blank
+    received_cmd = nil
+
+    with_server do |port|
+      Exportify::Jobs.stub(:start, lambda { |cmd|
+        received_cmd = cmd
+        'job123'
+      }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists")
+        Net::HTTP.post_form(uri, 'url' => 'https://open.spotify.com/playlist/abc123')
+      end
+    end
+
+    refute(received_cmd.any? { |arg| arg.start_with?('--browser') })
+  end
+
+  def test_get_job_status_returns_json
+    with_server do |port|
+      Exportify::Jobs.stub(:status, ->(id) { { status: 'done', log: ['ok'] } if id == 'job123' }) do
+        response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/jobs/job123"))
+
+        assert_equal '200', response.code
+        assert_equal({ 'status' => 'done', 'log' => ['ok'] }, JSON.parse(response.body))
+      end
+    end
+  end
+
+  def test_get_unknown_job_returns_404 # rubocop:disable Naming/VariableNumber
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/jobs/does-not-exist"))
+
+      assert_equal '404', response.code
     end
   end
 end

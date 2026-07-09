@@ -3,15 +3,20 @@
 require 'webrick'
 require 'erb'
 require 'uri'
+require 'json'
+require 'rbconfig'
 require_relative 'library'
 require_relative 'config'
 require_relative 'cover'
+require_relative 'jobs'
+require_relative 'cli'
 
 module Exportify
-  module WebServer
+  module WebServer # rubocop:disable Metrics/ModuleLength
     ROOT_DIR   = File.expand_path('../..', __dir__)
     VIEWS_DIR  = File.join(ROOT_DIR, 'views')
     PUBLIC_DIR = File.join(ROOT_DIR, 'public')
+    EXPORTIFY_BIN = File.join(ROOT_DIR, 'bin', 'exportify')
 
     module_function
 
@@ -34,9 +39,13 @@ module Exportify
     end
 
     def handle_request(req, res)
+      return handle_post(req, res) if req.request_method == 'POST'
+
       case req.path
       when '/'
         render_index(res)
+      when %r{\A/jobs/([^/]+)\z}
+        render_job_status(res, Regexp.last_match(1))
       when %r{\A/playlists/([^/]+)/faixas/([^/]+)\z}
         render_track(
           res,
@@ -48,6 +57,41 @@ module Exportify
       else
         render_not_found(res)
       end
+    end
+
+    def handle_post(req, res)
+      case req.path
+      when '/playlists'
+        create_playlist(req, res)
+      else
+        render_not_found(res)
+      end
+    end
+
+    def create_playlist(req, res)
+      url = req.query['url'].to_s.strip
+
+      return render_json(res, 400, error: 'URL inválida. Use um link de playlist do Spotify ou YouTube.') \
+        unless CLI.source_for(url)
+
+      browser = Library.presence(req.query['browser'])
+      cmd = [RbConfig.ruby, EXPORTIFY_BIN, url]
+      cmd << "--browser=#{browser}" if browser
+
+      render_json(res, 202, job_id: Jobs.start(cmd))
+    end
+
+    def render_job_status(res, job_id)
+      status = Jobs.status(job_id)
+      return render_json(res, 404, error: 'Job não encontrado.') unless status
+
+      render_json(res, 200, status)
+    end
+
+    def render_json(res, code, payload)
+      res.status = code
+      res['Content-Type'] = 'application/json'
+      res.body = JSON.generate(payload)
     end
 
     def render_index(res)
