@@ -255,4 +255,98 @@ class WebServerTest < Minitest::Test
       assert_equal '404', response.code
     end
   end
+
+  def test_post_retag_uses_stored_source_url_and_browser
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    File.write(
+      File.join(@dir, 'Rock', '.exportify.json'),
+      '{"url":"https://open.spotify.com/playlist/abc123","browser":"chrome"}'
+    )
+    received_cmd = nil
+
+    with_server do |port|
+      Exportify::Jobs.stub(:start, lambda { |cmd|
+        received_cmd = cmd
+        'job123'
+      }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists/Rock/retag")
+        response = Net::HTTP.post_form(uri, {})
+
+        assert_equal '202', response.code
+      end
+    end
+
+    assert_includes received_cmd, 'https://open.spotify.com/playlist/abc123'
+    assert_includes received_cmd, '--retag'
+    assert_includes received_cmd, '--browser=chrome'
+  end
+
+  def test_post_sync_uses_stored_source_url
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    File.write(File.join(@dir, 'Rock', '.exportify.json'), '{"url":"https://open.spotify.com/playlist/abc123"}')
+    received_cmd = nil
+
+    with_server do |port|
+      Exportify::Jobs.stub(:start, lambda { |cmd|
+        received_cmd = cmd
+        'job123'
+      }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists/Rock/sync")
+        Net::HTTP.post_form(uri, {})
+      end
+    end
+
+    assert_includes received_cmd, '--sync'
+    refute_includes received_cmd, '--retag'
+  end
+
+  def test_post_retag_without_stored_source_accepts_url_param
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    received_cmd = nil
+
+    with_server do |port|
+      Exportify::Jobs.stub(:start, lambda { |cmd|
+        received_cmd = cmd
+        'job123'
+      }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists/Rock/retag")
+        response = Net::HTTP.post_form(uri, 'url' => 'https://open.spotify.com/playlist/xyz')
+
+        assert_equal '202', response.code
+      end
+    end
+
+    assert_includes received_cmd, 'https://open.spotify.com/playlist/xyz'
+  end
+
+  def test_post_retag_without_stored_source_or_url_param_returns422
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+
+    with_server do |port|
+      uri = URI("http://127.0.0.1:#{port}/playlists/Rock/retag")
+      response = Net::HTTP.post_form(uri, {})
+
+      assert_equal '422', response.code
+    end
+  end
+
+  def test_post_retag_unknown_playlist_returns_404 # rubocop:disable Naming/VariableNumber
+    with_server do |port|
+      uri = URI("http://127.0.0.1:#{port}/playlists/Unknown/retag")
+      response = Net::HTTP.post_form(uri, {})
+
+      assert_equal '404', response.code
+    end
+  end
+
+  def test_get_playlist_exposes_source_presence_for_view
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    File.write(File.join(@dir, 'Rock', '.exportify.json'), '{"url":"https://open.spotify.com/playlist/abc123"}')
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock"))
+
+      assert_includes response.body, 'data-has-source="1"'
+    end
+  end
 end

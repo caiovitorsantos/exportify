@@ -1,5 +1,5 @@
 <a class="breadcrumb" href="/">&larr; Playlists</a>
-<h1><%= ERB::Util.html_escape(playlist_name) %></h1>
+<h1 data-has-source="<%= source ? '1' : '' %>"><%= ERB::Util.html_escape(playlist_name) %></h1>
 
 <div class="playlist-layout">
   <ol class="chart-list" id="search-container">

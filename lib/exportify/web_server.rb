@@ -63,6 +63,10 @@ module Exportify
       case req.path
       when '/playlists'
         create_playlist(req, res)
+      when %r{\A/playlists/([^/]+)/retag\z}
+        run_playlist_action(req, res, URI.decode_www_form_component(Regexp.last_match(1)), '--retag')
+      when %r{\A/playlists/([^/]+)/sync\z}
+        run_playlist_action(req, res, URI.decode_www_form_component(Regexp.last_match(1)), '--sync')
       else
         render_not_found(res)
       end
@@ -76,6 +80,21 @@ module Exportify
 
       browser = Library.presence(req.query['browser'])
       cmd = [RbConfig.ruby, EXPORTIFY_BIN, url]
+      cmd << "--browser=#{browser}" if browser
+
+      render_json(res, 202, job_id: Jobs.start(cmd))
+    end
+
+    def run_playlist_action(req, res, playlist_name, flag)
+      return render_json(res, 404, error: 'Playlist não encontrada.') unless Library.playlist_dir(playlist_name)
+
+      source = Library.source(playlist_name)
+      url = source ? source[:url] : Library.presence(req.query['url'])
+
+      return render_json(res, 422, error: 'Informe a URL de origem desta playlist.') unless url
+
+      browser = source ? source[:browser] : nil
+      cmd = [RbConfig.ruby, EXPORTIFY_BIN, url, flag]
       cmd << "--browser=#{browser}" if browser
 
       render_json(res, 202, job_id: Jobs.start(cmd))
@@ -105,7 +124,10 @@ module Exportify
 
       res['Content-Type'] = 'text/html; charset=utf-8'
       genres = tracks.filter_map { |track| track[:genre] }.uniq.sort
-      res.body = render_template('playlist', playlist_name: name, tracks: tracks, genres: genres)
+      res.body = render_template(
+        'playlist',
+        playlist_name: name, tracks: tracks, genres: genres, source: Library.source(name)
+      )
     end
 
     def render_track(res, playlist_name, filename)
