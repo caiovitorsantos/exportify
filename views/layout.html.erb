@@ -4,14 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Exportify</title>
+<script>
+(function () {
+  var theme = 'light';
+  try { theme = localStorage.getItem('exportify-theme') || 'light'; } catch (e) { /* modo privado */ }
+  document.documentElement.dataset.theme = theme;
+})();
+</script>
 <link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/app.js"></script>
 <script src="https://unpkg.com/@hotwired/turbo@8.0.23/dist/turbo.es2017-umd.js"
         integrity="sha384-2ePXINFSJiSCWUJkjFJGYdr2kyM132s7uBi9k+JISp4P+AjN9DXn4H/1enWEHu36"
         crossorigin="anonymous"></script>
 </head>
 <body>
-<main class="container">
+<div class="app-shell">
+<%= render_partial('sidebar') %>
+<div class="main">
+<%= render_partial('topbar') %>
+<main class="page-content">
 <%= content %>
 </main>
+</div>
+</div>
 </body>
 </html>

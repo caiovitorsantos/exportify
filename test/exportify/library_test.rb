@@ -137,9 +137,27 @@ class LibraryTest < Minitest::Test
           result = Exportify::Library.tracks('Rock')
 
           assert_equal(
-            [{ filename: 'Queen - Bohemian Rhapsody.mp3', title: 'Bohemian Rhapsody', artist: 'Queen' }],
+            [{ filename: 'Queen - Bohemian Rhapsody.mp3', title: 'Bohemian Rhapsody', artist: 'Queen', genre: nil }],
             result
           )
+        end
+      end
+    end
+  end
+
+  def test_tracks_includes_genre_from_tags
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'Queen - Bohemian Rhapsody.mp3'))
+
+      tags = { title: 'Bohemian Rhapsody', artist: 'Queen', track_number: '1', genre: 'Rock' }
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, tags) do
+          result = Exportify::Library.tracks('Rock')
+
+          assert_equal 'Rock', result.first[:genre]
         end
       end
     end
@@ -156,7 +174,7 @@ class LibraryTest < Minitest::Test
           result = Exportify::Library.tracks('Rock')
 
           assert_equal(
-            [{ filename: 'David Bowie - Heroes.mp3', title: 'Heroes', artist: 'David Bowie' }],
+            [{ filename: 'David Bowie - Heroes.mp3', title: 'Heroes', artist: 'David Bowie', genre: nil }],
             result
           )
         end
@@ -252,6 +270,53 @@ class LibraryTest < Minitest::Test
           assert_nil result[:duration_seconds]
           assert_equal 0, result[:file_size_bytes]
         end
+      end
+    end
+  end
+
+  def test_genres_returns_unique_sorted_non_empty_genres
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'A.mp3'))
+      FileUtils.touch(File.join(playlist_dir, 'B.mp3'))
+      FileUtils.touch(File.join(playlist_dir, 'C.mp3'))
+
+      by_filename = {
+        'A.mp3' => { genre: 'Rock' },
+        'B.mp3' => { genre: 'Pop' },
+        'C.mp3' => { genre: 'Rock' }
+      }
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, ->(filepath) { by_filename[File.basename(filepath)] }) do
+          assert_equal %w[Pop Rock], Exportify::Library.genres('Rock')
+        end
+      end
+    end
+  end
+
+  def test_genres_ignores_missing_or_blank_genre_tags
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'A.mp3'))
+      FileUtils.touch(File.join(playlist_dir, 'B.mp3'))
+
+      by_filename = { 'A.mp3' => { genre: '' }, 'B.mp3' => nil }
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, ->(filepath) { by_filename[File.basename(filepath)] }) do
+          assert_equal [], Exportify::Library.genres('Rock')
+        end
+      end
+    end
+  end
+
+  def test_genres_returns_empty_array_for_unknown_playlist
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_equal [], Exportify::Library.genres('Unknown')
       end
     end
   end

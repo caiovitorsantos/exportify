@@ -39,6 +39,27 @@ class WebServerTest < Minitest::Test
     end
   end
 
+  def test_get_root_renders_sidebar_and_topbar
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
+
+      assert_includes response.body, 'class="sidebar"'
+      assert_includes response.body, 'id="search-input"'
+    end
+  end
+
+  def test_get_root_renders_generated_cover_and_search_text
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
+
+      assert_includes response.body, 'class="cover cover--card"'
+      assert_includes response.body, 'data-search-text="Rock"'
+    end
+  end
+
   def test_get_root_shows_empty_state_when_no_playlists
     with_server do |port|
       response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
@@ -65,6 +86,18 @@ class WebServerTest < Minitest::Test
 
       assert_equal '200', response.code
       assert_includes response.body, 'Bohemian Rhapsody'
+    end
+  end
+
+  def test_get_playlist_renders_chart_list_with_numbered_index
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock"))
+
+      assert_includes response.body, 'class="chart-list"'
+      assert_includes response.body, 'chart-list__index'
     end
   end
 
@@ -110,6 +143,18 @@ class WebServerTest < Minitest::Test
     end
   end
 
+  def test_get_track_renders_large_cover
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      url = URI("http://127.0.0.1:#{port}/playlists/Rock/faixas/Queen%20-%20Bohemian%20Rhapsody.mp3")
+      response = Net::HTTP.get_response(url)
+
+      assert_includes response.body, 'cover--lg'
+    end
+  end
+
   def test_get_unknown_track_returns_404 # rubocop:disable Naming/VariableNumber
     FileUtils.mkdir_p(File.join(@dir, 'Rock'))
 
@@ -117,6 +162,22 @@ class WebServerTest < Minitest::Test
       response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock/faixas/missing.mp3"))
 
       assert_equal '404', response.code
+    end
+  end
+
+  def test_get_style_css_is_served
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/assets/style.css"))
+
+      assert_equal '200', response.code
+    end
+  end
+
+  def test_get_app_js_is_served
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/assets/app.js"))
+
+      assert_equal '200', response.code
     end
   end
 end

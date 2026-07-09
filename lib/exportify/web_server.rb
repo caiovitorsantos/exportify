@@ -5,6 +5,7 @@ require 'erb'
 require 'uri'
 require_relative 'library'
 require_relative 'config'
+require_relative 'cover'
 
 module Exportify
   module WebServer
@@ -59,7 +60,8 @@ module Exportify
       return render_not_found(res, 'Playlist não encontrada.') unless tracks
 
       res['Content-Type'] = 'text/html; charset=utf-8'
-      res.body = render_template('playlist', playlist_name: name, tracks: tracks)
+      genres = tracks.filter_map { |track| track[:genre] }.uniq.sort
+      res.body = render_template('playlist', playlist_name: name, tracks: tracks, genres: genres)
     end
 
     def render_track(res, playlist_name, filename)
@@ -113,6 +115,7 @@ module Exportify
 
     class TemplateContext
       def initialize(locals)
+        @locals = locals
         locals.each_key do |key|
           instance_variable_set(:"@#{key}", locals[key])
           define_singleton_method(key) { instance_variable_get(:"@#{key}") }
@@ -121,6 +124,10 @@ module Exportify
 
       def template_binding
         binding
+      end
+
+      def render_partial(name)
+        WebServer.render_erb("_#{name}.html.erb", @locals)
       end
     end
   end

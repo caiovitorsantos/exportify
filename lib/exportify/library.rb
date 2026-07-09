@@ -73,6 +73,16 @@ module Exportify
          .each { |summary| summary.delete(:sort_key) }
     end
 
+    def genres(playlist_name)
+      dir = playlist_dir(playlist_name)
+      return [] unless dir
+
+      Dir.glob(File.join(dir, '*.mp3')).filter_map do |filepath|
+        tags = read_tags(filepath)
+        presence(tags && tags[:genre])
+      end.uniq.sort
+    end
+
     def track_summary(filepath)
       filename = File.basename(filepath)
       tags     = read_tags(filepath)
@@ -81,8 +91,9 @@ module Exportify
       title  = tags && !tags[:title].to_s.strip.empty? ? tags[:title] : fallback[:title]
       artist = tags && !tags[:artist].to_s.strip.empty? ? tags[:artist] : fallback[:artist]
       number = tags && tags[:track_number].to_s[/\d+/]&.to_i
+      genre  = presence(tags && tags[:genre])
 
-      { filename: filename, title: title, artist: artist, sort_key: number || Float::INFINITY }
+      { filename: filename, title: title, artist: artist, genre: genre, sort_key: number || Float::INFINITY }
     end
 
     def track(playlist_name, filename)
