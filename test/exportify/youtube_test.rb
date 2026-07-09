@@ -256,8 +256,8 @@ class YouTubeTest < Minitest::Test
       track = Exportify::YouTube.fetch_video('https://www.youtube.com/watch?v=vid1')[:tracks].first
 
       expected = {
-        artist: 'ChartHistories',
-        all_artists: 'ChartHistories',
+        artist: 'Unknown Artist',
+        all_artists: 'Unknown Artist',
         name: 'Aftersoft',
         raw_name: 'Aftersoft',
         album: 'Slow Touch Mix',
@@ -270,6 +270,25 @@ class YouTubeTest < Minitest::Test
       }
 
       assert_equal expected, track
+    end
+  end
+
+  def test_fetch_video_chapter_track_does_not_use_channel_as_artist_fallback
+    body = {
+      'id' => 'vid1',
+      'title' => 'Neo-Soul Mix',
+      'uploader' => 'Nia',
+      'channel' => 'Nia',
+      'chapters' => [
+        { 'title' => "Didn't Cha Know", 'start_time' => 0.0, 'end_time' => 195.0 }
+      ]
+    }.to_json
+
+    stub_yt_dlp(stdout: body) do
+      track = Exportify::YouTube.fetch_video('https://www.youtube.com/watch?v=vid1')[:tracks].first
+
+      refute_equal 'Nia', track[:artist]
+      assert_equal 'Unknown Artist', track[:artist]
     end
   end
 

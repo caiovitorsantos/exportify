@@ -56,7 +56,7 @@ module Exportify
     end
 
     def build_chapter_track(chapter, index, data)
-      artist, name = split_title(chapter['title'].to_s, data['uploader'] || data['channel'])
+      artist, name = split_title(chapter['title'].to_s, 'Unknown Artist')
 
       {
         artist: artist,
