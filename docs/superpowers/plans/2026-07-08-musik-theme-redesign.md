@@ -496,6 +496,7 @@ por:
 })();
 </script>
 <link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/app.js"></script>
 <script src="https://unpkg.com/@hotwired/turbo@8.0.23/dist/turbo.es2017-umd.js"
         integrity="sha384-2ePXINFSJiSCWUJkjFJGYdr2kyM132s7uBi9k+JISp4P+AjN9DXn4H/1enWEHu36"
         crossorigin="anonymous"></script>
@@ -510,10 +511,14 @@ por:
 </main>
 </div>
 </div>
-<script src="/assets/app.js"></script>
 </body>
 </html>
 ```
+
+`app.js` fica no `<head>` (não no fim do `<body>`) porque o Turbo Drive re-executa `<script>`
+do corpo a cada navegação, mas não re-executa elementos de `<head>` que permanecem idênticos
+entre páginas — colocar no body faria os listeners de `turbo:load` se acumularem a cada
+navegação. Esse ajuste foi descoberto na revisão final da branch (ver `.superpowers/sdd/final-review-fix-report.md`) e retro-aplicado aqui.
 
 - [ ] **Step 7: Rodar toda a suíte de `web_server_test.rb` e confirmar que passa**
 
@@ -1283,9 +1288,16 @@ por:
       return render_not_found(res, 'Playlist não encontrada.') unless tracks
 
       res['Content-Type'] = 'text/html; charset=utf-8'
-      res.body = render_template('playlist', playlist_name: name, tracks: tracks, genres: Library.genres(name))
+      genres = tracks.filter_map { |track| track[:genre] }.uniq.sort
+      res.body = render_template('playlist', playlist_name: name, tracks: tracks, genres: genres)
     end
 ```
+
+`genres` é derivado do array `tracks` (que já traz `:genre` desde a Task 2), em vez de
+chamar `Library.genres(name)` de novo — evitar ler as tags ID3 de cada faixa duas vezes
+(dois spawns de `python3` por faixa). Esse ajuste foi descoberto na revisão final da
+branch e retro-aplicado aqui; `Library.genres` continua existindo e testado, só não é
+mais chamado a partir de `render_playlist`.
 
 - [ ] **Step 4: Reescrever `views/playlist.html.erb`**
 
