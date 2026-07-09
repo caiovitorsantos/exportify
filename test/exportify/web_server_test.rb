@@ -375,4 +375,26 @@ class WebServerTest < Minitest::Test
       assert_includes response.body, 'data-has-source="1"'
     end
   end
+
+  def test_get_root_renders_create_playlist_trigger
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/"))
+
+      assert_includes response.body, 'data-job-trigger="create"'
+      assert_includes response.body, 'id="job-modal"'
+    end
+  end
+
+  def test_get_playlist_renders_retag_and_sync_triggers
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    FileUtils.touch(File.join(@dir, 'Rock', 'Queen - Bohemian Rhapsody.mp3'))
+
+    with_server do |port|
+      response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock"))
+
+      assert_includes response.body, 'data-job-trigger="retag"'
+      assert_includes response.body, 'data-job-trigger="sync"'
+      assert_includes response.body, 'data-playlist="Rock"'
+    end
+  end
 end
