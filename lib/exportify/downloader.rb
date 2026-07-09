@@ -4,7 +4,7 @@ module Exportify
   module Downloader
     module_function
 
-    def download(track, output_dir)
+    def download(track, output_dir, browser: nil)
       artist   = sanitize(track[:artist])
       name     = sanitize(track[:name])
       template = File.join(output_dir, "#{artist} - #{name}.%(ext)s")
@@ -16,12 +16,15 @@ module Exportify
                  "ytsearch1:#{query}"
                end
 
-      system(
+      cmd = [
         'yt-dlp', source,
         '--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0',
         '--output', template,
         '--no-playlist', '--quiet', '--no-warnings'
-      )
+      ]
+      cmd += ['--cookies-from-browser', browser] if browser
+
+      system(*cmd)
     end
 
     def sanitize(str)

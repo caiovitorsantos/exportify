@@ -103,4 +103,53 @@ class DownloaderTest < Minitest::Test
 
     assert(received_args.any? { |a| a.to_s.start_with?('ytsearch1:') })
   end
+
+  def test_download_with_browser_passes_cookies_from_browser
+    track = {
+      video_id: 'dQw4w9WgXcQ',
+      artist: 'Rick Astley',
+      all_artists: 'Rick Astley',
+      name: 'Never Gonna Give You Up',
+      raw_name: 'Never Gonna Give You Up'
+    }
+    received_args = nil
+
+    Exportify::Downloader.stub(
+      :system,
+      lambda { |*args|
+        received_args = args
+        true
+      }
+    ) do
+      Exportify::Downloader.download(track, '/tmp', browser: 'safari')
+    end
+
+    cookies_index = received_args.index('--cookies-from-browser')
+
+    refute_nil cookies_index
+    assert_equal 'safari', received_args[cookies_index + 1]
+  end
+
+  def test_download_without_browser_omits_cookies_flag
+    track = {
+      video_id: 'dQw4w9WgXcQ',
+      artist: 'Rick Astley',
+      all_artists: 'Rick Astley',
+      name: 'Never Gonna Give You Up',
+      raw_name: 'Never Gonna Give You Up'
+    }
+    received_args = nil
+
+    Exportify::Downloader.stub(
+      :system,
+      lambda { |*args|
+        received_args = args
+        true
+      }
+    ) do
+      Exportify::Downloader.download(track, '/tmp')
+    end
+
+    refute_includes received_args, '--cookies-from-browser'
+  end
 end
