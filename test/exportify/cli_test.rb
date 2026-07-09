@@ -2,6 +2,7 @@
 
 require 'test_helper'
 require 'exportify/web_server'
+require 'json'
 
 class CLITest < Minitest::Test
   def test_exits_without_playlist_url
@@ -752,5 +753,41 @@ class CLITest < Minitest::Test
     end
 
     assert_equal 1, tagged.size
+  end
+
+  def test_run_writes_browser_into_playlist_metadata
+    require 'tmpdir'
+
+    fake_data = { name: 'Minha Playlist', tracks: [] }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, fake_data) do
+          Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123', '--browser=firefox'])
+        end
+
+        meta = Exportify::PlaylistMeta.read('Minha Playlist')
+
+        assert_equal 'firefox', meta[:browser]
+      end
+    end
+  end
+
+  def test_run_without_browser_leaves_playlist_metadata_browser_nil
+    require 'tmpdir'
+
+    fake_data = { name: 'Minha Playlist', tracks: [] }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, fake_data) do
+          Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123'])
+        end
+
+        meta = Exportify::PlaylistMeta.read('Minha Playlist')
+
+        assert_nil meta[:browser]
+      end
+    end
   end
 end
