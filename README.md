@@ -157,6 +157,7 @@ A tonalidade é exibida no app web em notação Camelot (ex.: `128 · 8A`),
 usada para mixagem harmônica.
 
 ### Visualizar playlists baixadas (app web)
+### Visualizar e gerenciar playlists pelo app web
 
 Para navegar pelas playlists e músicas já baixadas em um painel web:
 
@@ -172,8 +173,19 @@ de áudio. Para usar outra porta:
 bin/exportify web --port 8080
 ```
 
-> App somente leitura — os downloads continuam sendo feitos via CLI
-> (`bin/exportify <url>`).
+Pela interface também é possível:
+
+- **Nova playlist** — colar uma URL do Spotify ou YouTube/YouTube Music na
+  home e baixar sem usar o terminal.
+- **Sincronizar** — na página de uma playlist já baixada, busca faixas
+  novas e remove do disco as que saíram da playlist (equivalente a
+  `--sync`).
+- **Retag** — regrava as tags ID3 dos arquivos existentes sem rebaixar
+  (equivalente a `--retag`).
+
+Cada ação roda `bin/exportify` como subprocesso e mostra o progresso em um
+modal com o mesmo log exibido no terminal. O CLI continua funcionando
+normalmente para quem preferir o terminal.
 
 ## Desenvolvimento
 
