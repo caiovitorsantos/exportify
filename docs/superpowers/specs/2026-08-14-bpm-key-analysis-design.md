@@ -96,17 +96,21 @@ end
 
 ### `Exportify::Tagger` (estendido)
 
-Adiciona os frames `TBPM` e `TKEY` ao script Python do mutagen, apenas quando
-o track carrega `:bpm` / `:key`:
+Novo método `tag_analysis(filepath, bpm:, key:)` que grava **apenas** os frames
+`TBPM` e `TKEY` num arquivo já taggeado, sem tocar nos demais frames:
 
 ```python
-from mutagen.id3 import ..., TBPM, TKEY
-if bpm:  tags['TBPM'] = TBPM(encoding=3, text=str(bpm))
-if key:  tags['TKEY'] = TKEY(encoding=3, text=key)
+from mutagen.id3 import ID3, TBPM, TKEY, error
+try:    tags = ID3(filepath)
+except error: tags = ID3()
+# grava TBPM só se bpm; TKEY só se key
+tags.save(filepath)
 ```
 
-O hash `track` passado ao `Tagger.tag` passa a poder conter `:bpm` e `:key`.
-Quando ausentes, os frames não são escritos (retrocompatível).
+Fica separado de `Tagger.tag` (metadados de título/artista/etc.) porque o
+comando `analyze` roda sobre arquivos cujo hash de metadados original já não
+está em mãos — ele só acrescenta BPM/key ao que existe. Se `bpm` e `key` forem
+ambos `nil`, é um no-op (não invoca o Python).
 
 ### `Exportify::CLI` (estendido)
 
@@ -116,15 +120,17 @@ regrava as tags de BPM/key — a menos que `--no-analyze` seja passado. Vale
 também para o fluxo de vídeo com capítulos (`download_chaptered_video`), já que
 opera arquivo a arquivo.
 
-**Novo subcomando `analyze`.** `bin/exportify analyze <playlist-ou-url>`
-analisa faixas **já baixadas** da pasta correspondente:
+**Novo subcomando `analyze`.** Analisa faixas **já baixadas** operando sobre as
+pastas locais (não sobre URL — resolver URL→pasta exigiria rede/credenciais só
+pra descobrir o nome, o que contraria a proposta de processar o acervo local):
 
-- Resolve a pasta da playlist a partir da URL (Spotify/YouTube) — reaproveita
-  `source_for` e a lógica de nome/`output_dir` de `run`.
+- `bin/exportify analyze "<nome da playlist>"` analisa uma pasta.
+- `bin/exportify analyze --all` analisa todas as playlists (reaproveita
+  `Library.playlists` / `Library.playlist_dir`, o mesmo modelo do app web).
 - Para cada `*.mp3` da pasta, **pula** os que já têm `TBPM` **e** `TKEY`
   (idempotência, no mesmo espírito do "already exists, skipping" do download).
 - `--reanalyze` força recalcular mesmo com tags presentes.
-- Imprime resumo: `N analyzed, M skipped, K failed`.
+- Imprime resumo por playlist: `N analyzed, M skipped, K failed`.
 
 **Flags novas:**
 
@@ -141,8 +147,9 @@ leitura ID3 já usado pela `Library` no app web.
 - **Lista de faixas** (`playlist.html.erb`): badge `128 · 8A` por faixa.
 - **Detalhe da faixa** (`track.html.erb`): BPM e key (musical + Camelot) junto
   das demais tags ID3.
-- Cor do badge por key seguindo o padrão da roda de Camelot (base visual
-  pronta para o futuro spec de mixagem harmônica). App continua somente leitura.
+- Badge neutro por ora; a coloração por key seguindo a roda de Camelot fica
+  para o spec futuro de mixagem harmônica, que é quem realmente usa essa
+  semântica visual. App continua somente leitura.
 
 ## Fluxo de dados
 
@@ -166,9 +173,9 @@ Lote (acervo existente):
 
 ## Tratamento de erros
 
-- Binário de análise ausente → mensagem clara sugerindo `make install-analysis`;
-  no download automático, degrada graciosamente (baixa e taggeia sem BPM/key,
-  avisa uma vez).
+- Binário de análise ausente (`Errno::ENOENT`) → a detecção degrada para `nil`;
+  no download automático segue normal (baixa e taggeia sem BPM/key, sem quebrar).
+  O `README`/`Makefile` orientam a instalar via `make install-analysis`.
 - Falha de análise em um arquivo específico → conta como `failed`, segue para
   o próximo (não aborta o lote).
 - Saída inesperada das ferramentas → key desconhecida vira `nil` (sem Camelot),
