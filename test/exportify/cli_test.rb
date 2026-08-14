@@ -683,4 +683,74 @@ class CLITest < Minitest::Test
       end
     end
   end
+
+  def test_analyze_playlist_skips_already_analyzed
+    require 'tmpdir'
+
+    Dir.mktmpdir do |root|
+      dir = File.join(root, 'MinhaPlaylist')
+      FileUtils.mkdir_p(dir)
+      FileUtils.touch(File.join(dir, 'A - Song.mp3'))
+
+      Exportify::Config.stub(:output_dir, root) do
+        Exportify::Library.stub(:read_tags, { bpm: '128', key: 'Am' }) do
+          Exportify::Analyzer.stub(:analyze, ->(*_a) { raise 'não deveria analisar' }) do
+            assert_output(/1 skipped/) do
+              Exportify::CLI.analyze_playlist('MinhaPlaylist')
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def test_analyze_playlist_analyzes_missing_and_tags
+    require 'tmpdir'
+    tagged = []
+
+    Dir.mktmpdir do |root|
+      dir = File.join(root, 'MinhaPlaylist')
+      FileUtils.mkdir_p(dir)
+      FileUtils.touch(File.join(dir, 'A - Song.mp3'))
+
+      Exportify::Config.stub(:output_dir, root) do
+        Exportify::Library.stub(:read_tags, { bpm: '', key: '' }) do
+          Exportify::Analyzer.stub(:analyze, { bpm: 128, key: 'Am' }) do
+            Exportify::Tagger.stub(:tag_analysis, ->(path, **kw) { tagged << [path, kw] }) do
+              assert_output(/1 analyzed/) do
+                Exportify::CLI.analyze_playlist('MinhaPlaylist')
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 1, tagged.size
+    assert_equal({ bpm: 128, key: 'Am' }, tagged.first[1])
+  end
+
+  def test_analyze_playlist_reanalyze_ignores_existing_tags
+    require 'tmpdir'
+    tagged = []
+
+    Dir.mktmpdir do |root|
+      dir = File.join(root, 'MinhaPlaylist')
+      FileUtils.mkdir_p(dir)
+      FileUtils.touch(File.join(dir, 'A - Song.mp3'))
+
+      Exportify::Config.stub(:output_dir, root) do
+        # já tem tags, mas --reanalyze força; read_tags nem deveria decidir skip
+        Exportify::Analyzer.stub(:analyze, { bpm: 130, key: 'Em' }) do
+          Exportify::Tagger.stub(:tag_analysis, ->(path, **kw) { tagged << [path, kw] }) do
+            assert_output(/1 analyzed/) do
+              Exportify::CLI.analyze_playlist('MinhaPlaylist', reanalyze: true)
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 1, tagged.size
+  end
 end

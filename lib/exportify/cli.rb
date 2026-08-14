@@ -10,6 +10,7 @@ require_relative 'downloader'
 require_relative 'tagger'
 require_relative 'playlist_meta'
 require_relative 'analyzer'
+require_relative 'library'
 
 module Exportify
   module CLI
@@ -20,6 +21,7 @@ module Exportify
     def run(argv)
       return run_init(argv[1]) if argv[0] == 'init'
       return run_web(argv[1..]) if argv[0] == 'web'
+      return run_analyze(argv[1..]) if argv[0] == 'analyze'
 
       retag   = false
       sync    = false
@@ -319,6 +321,73 @@ module Exportify
     def analyze_file(filepath)
       result = Analyzer.analyze(filepath)
       Tagger.tag_analysis(filepath, **result) if result
+    end
+
+    def run_analyze(argv)
+      reanalyze = false
+      all       = false
+
+      parser = OptionParser.new do |opts|
+        opts.banner = "Usage:\n  " \
+                      "exportify analyze \"<playlist>\" [--reanalyze]\n  " \
+                      'exportify analyze --all [--reanalyze]'
+        opts.on('--reanalyze', 'Recalcular BPM/key mesmo em faixas já analisadas') { reanalyze = true }
+        opts.on('--all', 'Analisar todas as playlists baixadas') { all = true }
+      end
+      parser.parse!(argv)
+
+      targets =
+        if all
+          Library.playlists.map { |playlist| playlist[:name] }
+        elsif argv[0]
+          [argv[0]]
+        else
+          abort parser.banner
+        end
+
+      targets.each { |name| analyze_playlist(name, reanalyze: reanalyze) }
+    end
+
+    def analyze_playlist(playlist_name, reanalyze: false)
+      dir = Library.playlist_dir(playlist_name)
+      unless dir
+        puts "Playlist não encontrada: #{playlist_name}"
+        return
+      end
+
+      files = Dir.glob(File.join(dir, '*.mp3'))
+      puts "#{playlist_name}: #{files.size} faixas"
+
+      analyzed = skipped = failed = 0
+
+      files.each do |filepath|
+        print "  #{File.basename(filepath)} "
+
+        if !reanalyze && already_analyzed?(filepath)
+          puts '(já analisada, pulando)'
+          skipped += 1
+          next
+        end
+
+        result = Analyzer.analyze(filepath)
+        if result
+          Tagger.tag_analysis(filepath, **result)
+          puts "(#{result[:bpm]} BPM, #{result[:key]})"
+          analyzed += 1
+        else
+          puts '(falha na análise)'
+          failed += 1
+        end
+      end
+
+      puts "\n#{playlist_name}: #{analyzed} analyzed, #{skipped} skipped, #{failed} failed."
+    end
+
+    def already_analyzed?(filepath)
+      tags = Library.read_tags(filepath)
+      return false unless tags
+
+      !tags[:bpm].to_s.strip.empty? && !tags[:key].to_s.strip.empty?
     end
   end
 end

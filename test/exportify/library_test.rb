@@ -320,4 +320,18 @@ class LibraryTest < Minitest::Test
       end
     end
   end
+
+  def test_read_tags_includes_bpm_and_key
+    stdout = '{"title":"","all_artists":"","artist":"","album":"","year":"",' \
+             '"track_number":"","genre":"","bpm":"128","key":"Am","duration_seconds":10.0}'
+    status = Object.new
+    status.define_singleton_method(:success?) { true }
+
+    Open3.stub(:capture3, [stdout, '', status]) do
+      tags = Exportify::Library.read_tags('/tmp/x.mp3')
+
+      assert_equal '128', tags[:bpm]
+      assert_equal 'Am', tags[:key]
+    end
+  end
 end

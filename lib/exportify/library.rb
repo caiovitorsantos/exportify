@@ -34,6 +34,8 @@ module Exportify
           'year': str(tags.get('TDRC', '')),
           'track_number': str(tags.get('TRCK', '')),
           'genre': str(tags.get('TCON', '')),
+          'bpm': str(tags.get('TBPM', '')),
+          'key': str(tags.get('TKEY', '')),
           'duration_seconds': audio.info.length,
         }))
       PY
