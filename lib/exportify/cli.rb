@@ -9,6 +9,7 @@ require_relative 'youtube'
 require_relative 'downloader'
 require_relative 'tagger'
 require_relative 'playlist_meta'
+require_relative 'analyzer'
 
 module Exportify
   module CLI
@@ -23,6 +24,7 @@ module Exportify
       retag   = false
       sync    = false
       browser = nil
+      analyze = true
 
       parser = OptionParser.new do |opts|
         opts.banner = "Usage:\n  " \
@@ -35,6 +37,7 @@ module Exportify
         opts.on('--browser=NOME', 'Navegador para extrair cookies (playlists privadas do YouTube)') do |b|
           browser = b
         end
+        opts.on('--no-analyze', 'Não detectar BPM/key após o download') { analyze = false }
       end
 
       parser.parse!(argv)
@@ -70,7 +73,8 @@ module Exportify
       puts "Output: #{output_dir}\n\n"
 
       if chaptered
-        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir, retag: retag, browser: browser)
+        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir,
+                                          retag: retag, browser: browser, analyze: analyze)
         ok     = result[:ok]
         skip   = result[:skip]
         failed = result[:failed]
@@ -108,6 +112,7 @@ module Exportify
 
           if success && File.exist?(filepath)
             Tagger.tag(filepath, track)
+            analyze_file(filepath) if analyze
             ok += 1
           else
             failed += 1
@@ -155,7 +160,7 @@ module Exportify
       [name, tracks]
     end
 
-    def download_chaptered_video(data, output_dir, retag: false, browser: nil)
+    def download_chaptered_video(data, output_dir, retag: false, browser: nil, analyze: true)
       tracks = data[:tracks]
       expected_files = tracks.map do |track|
         "#{Downloader.sanitize(track[:artist])} - #{Downloader.sanitize(track[:name])}.mp3"
@@ -212,6 +217,7 @@ module Exportify
         target_file = File.join(output_dir, expected_files[i])
         File.rename(source_file, target_file)
         Tagger.tag(target_file, track)
+        analyze_file(target_file) if analyze
         ok += 1
       end
 
@@ -308,6 +314,11 @@ module Exportify
       return :youtube_video if url.match?(%r{(music\.)?youtube\.com/watch}) && url.match?(/[?&]v=/)
 
       nil
+    end
+
+    def analyze_file(filepath)
+      result = Analyzer.analyze(filepath)
+      Tagger.tag_analysis(filepath, **result) if result
     end
   end
 end
