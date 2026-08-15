@@ -17,6 +17,11 @@
           <span class="chart-list__info">
             <span class="chart-list__title"><%= ERB::Util.html_escape(track[:title]) %></span>
             <span class="chart-list__artist"><%= ERB::Util.html_escape(track[:artist]) %></span>
+            <% if track[:bpm] || track[:camelot] %>
+              <span class="chart-list__badge">
+                <%= ERB::Util.html_escape([track[:bpm], track[:camelot]].compact.join(' · ')) %>
+              </span>
+            <% end %>
           </span>
         </a>
       </li>

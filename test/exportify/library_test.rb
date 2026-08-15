@@ -137,7 +137,8 @@ class LibraryTest < Minitest::Test
           result = Exportify::Library.tracks('Rock')
 
           assert_equal(
-            [{ filename: 'Queen - Bohemian Rhapsody.mp3', title: 'Bohemian Rhapsody', artist: 'Queen', genre: nil }],
+            [{ filename: 'Queen - Bohemian Rhapsody.mp3', title: 'Bohemian Rhapsody', artist: 'Queen', genre: nil,
+               bpm: nil, key: nil, camelot: nil }],
             result
           )
         end
@@ -174,7 +175,8 @@ class LibraryTest < Minitest::Test
           result = Exportify::Library.tracks('Rock')
 
           assert_equal(
-            [{ filename: 'David Bowie - Heroes.mp3', title: 'Heroes', artist: 'David Bowie', genre: nil }],
+            [{ filename: 'David Bowie - Heroes.mp3', title: 'Heroes', artist: 'David Bowie', genre: nil,
+               bpm: nil, key: nil, camelot: nil }],
             result
           )
         end
@@ -349,5 +351,25 @@ class LibraryTest < Minitest::Test
 
     assert_includes script, 'TBPM'
     assert_includes script, 'TKEY'
+  end
+
+  def test_track_summary_includes_bpm_and_camelot
+    tags = { title: 'T', artist: 'A', track_number: '1', genre: 'x', bpm: '128', key: 'Am' }
+    Exportify::Library.stub(:read_tags, tags) do
+      summary = Exportify::Library.track_summary('/x/A - T.mp3')
+
+      assert_equal '128', summary[:bpm]
+      assert_equal '8A', summary[:camelot]
+    end
+  end
+
+  def test_track_summary_camelot_nil_without_key
+    tags = { title: 'T', artist: 'A', track_number: '1', genre: 'x', bpm: '', key: '' }
+    Exportify::Library.stub(:read_tags, tags) do
+      summary = Exportify::Library.track_summary('/x/A - T.mp3')
+
+      assert_nil summary[:bpm]
+      assert_nil summary[:camelot]
+    end
   end
 end

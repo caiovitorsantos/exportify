@@ -3,6 +3,7 @@
 require 'open3'
 require 'json'
 require_relative 'config'
+require_relative 'analyzer'
 
 module Exportify
   module Library
@@ -94,8 +95,10 @@ module Exportify
       artist = tags && !tags[:artist].to_s.strip.empty? ? tags[:artist] : fallback[:artist]
       number = tags && tags[:track_number].to_s[/\d+/]&.to_i
       genre  = presence(tags && tags[:genre])
+      key    = presence(tags && tags[:key])
 
-      { filename: filename, title: title, artist: artist, genre: genre, sort_key: number || Float::INFINITY }
+      { filename: filename, title: title, artist: artist, genre: genre, bpm: presence(tags && tags[:bpm]),
+        key: key, camelot: key && Analyzer.camelot(key), sort_key: number || Float::INFINITY }
     end
 
     def track(playlist_name, filename)
@@ -115,6 +118,9 @@ module Exportify
         year: presence(tags && tags[:year]),
         track_number: presence(tags && tags[:track_number]),
         genre: presence(tags && tags[:genre]),
+        bpm: presence(tags && tags[:bpm]),
+        key: presence(tags && tags[:key]),
+        camelot: (k = presence(tags && tags[:key])) && Analyzer.camelot(k),
         duration_seconds: tags && tags[:duration_seconds],
         file_size_bytes: File.size(filepath)
       }
