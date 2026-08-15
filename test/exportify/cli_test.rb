@@ -165,6 +165,150 @@ class CLITest < Minitest::Test
     assert_nil Exportify::CLI.source_for('https://www.youtube.com/watch?list=PL123')
   end
 
+  def test_resolve_target_returns_url_and_source_for_direct_url
+    url = 'https://open.spotify.com/playlist/abc123'
+
+    assert_equal [url, :spotify], Exportify::CLI.resolve_target(url)
+  end
+
+  def test_resolve_target_resolves_playlist_name_to_saved_url
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Deep House')
+      FileUtils.mkdir_p(playlist_dir)
+      Exportify::PlaylistMeta.write(
+        playlist_dir,
+        url: 'https://open.spotify.com/playlist/abc123',
+        source: :spotify,
+        name: 'Deep House'
+      )
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_equal(
+          ['https://open.spotify.com/playlist/abc123', :spotify],
+          Exportify::CLI.resolve_target('Deep House')
+        )
+      end
+    end
+  end
+
+  def test_resolve_target_returns_nil_for_playlist_without_saved_url
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'Deep House'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::CLI.resolve_target('Deep House')
+      end
+    end
+  end
+
+  def test_resolve_target_returns_nil_for_unknown_argument
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::CLI.resolve_target('Nao Existe')
+      end
+    end
+  end
+
+  def test_run_by_playlist_name_fetches_saved_url
+    require 'tmpdir'
+    received_url = nil
+
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'P')
+      FileUtils.mkdir_p(playlist_dir)
+      Exportify::PlaylistMeta.write(
+        playlist_dir,
+        url: 'https://www.youtube.com/playlist?list=PL123',
+        source: :youtube,
+        name: 'P'
+      )
+
+      fetch_stub = lambda do |url, **|
+        received_url = url
+        { name: 'P', tracks: [] }
+      end
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, fetch_stub) do
+          Exportify::CLI.run(['P', '--sync'])
+        end
+      end
+    end
+
+    assert_equal 'https://www.youtube.com/playlist?list=PL123', received_url
+  end
+
+  def test_run_exits_for_playlist_name_without_saved_url
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'Deep House'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_output(nil, /Deep House/) do
+          assert_raises(SystemExit) { Exportify::CLI.run(['Deep House', '--sync']) }
+        end
+      end
+    end
+  end
+
+  def test_run_saves_playlist_meta_without_query_string
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::CLI.stub(:fetch_spotify_playlist, ['Deep House', []]) do
+          Exportify::CLI.run(['https://open.spotify.com/playlist/abc123?si=xyz'])
+        end
+
+        meta = Exportify::PlaylistMeta.read('Deep House')
+
+        assert_equal 'https://open.spotify.com/playlist/abc123', meta[:url]
+        assert_equal 'spotify', meta[:source]
+        assert_equal 'Deep House', meta[:name]
+      end
+    end
+  end
+
+  def test_run_keeps_youtube_query_string_in_saved_meta
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, { name: 'P', tracks: [] }) do
+          Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123'])
+        end
+
+        assert_equal 'https://www.youtube.com/playlist?list=PL123', Exportify::PlaylistMeta.read('P')[:url]
+      end
+    end
+  end
+
+  def test_sync_keeps_meta_file
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'P')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'Orphan - Track.mp3'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, { name: 'P', tracks: [] }) do
+          Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123', '--sync'])
+        end
+      end
+
+      assert_path_exists File.join(playlist_dir, '.exportify.json')
+      refute_path_exists File.join(playlist_dir, 'Orphan - Track.mp3')
+    end
+  end
+
   def test_youtube_source_skips_spotify_credentials_check
     require 'tmpdir'
     ENV.delete('SPOTIFY_CLIENT_ID')

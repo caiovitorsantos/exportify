@@ -8,6 +8,7 @@ require_relative 'spotify'
 require_relative 'youtube'
 require_relative 'downloader'
 require_relative 'tagger'
+require_relative 'playlist_meta'
 
 module Exportify
   module CLI
@@ -27,7 +28,8 @@ module Exportify
         opts.banner = "Usage:\n  " \
                       "exportify init\n  " \
                       "exportify web [--port PORTA]\n  " \
-                      'exportify <playlist_or_video_url> [--retag] [--sync] [--browser=NOME]'
+                      "exportify <playlist_or_video_url> [--retag] [--sync] [--browser=NOME]\n  " \
+                      'exportify "<nome_da_playlist>" [--retag] [--sync]   (usa a URL salva no download)'
         opts.on('--retag', 'Regravar tags ID3 nos arquivos existentes') { retag = true }
         opts.on('--sync',  'Remover arquivos locais que não estão mais na playlist') { sync = true }
         opts.on('--browser=NOME', 'Navegador para extrair cookies (playlists privadas do YouTube)') do |b|
@@ -36,12 +38,12 @@ module Exportify
       end
 
       parser.parse!(argv)
-      url = argv[0]
+      target = argv[0]
 
-      abort parser.banner unless url
+      abort parser.banner unless target
 
-      source = source_for(url)
-      abort 'Invalid playlist URL' unless source
+      url, source = resolve_target(target)
+      abort "Invalid playlist URL: #{target}. Informe a URL ou o nome de uma playlist já baixada." unless source
 
       puts 'Fetching playlist...'
       chaptered = false
@@ -62,6 +64,7 @@ module Exportify
       output_dir = File.expand_path(File.join(Config.output_dir, Downloader.sanitize(name)))
 
       FileUtils.mkdir_p(output_dir)
+      PlaylistMeta.write(output_dir, url: canonical_url(url, source), source: source, name: name)
 
       puts "#{tracks.size} tracks found"
       puts "Output: #{output_dir}\n\n"
@@ -137,7 +140,7 @@ module Exportify
     end
 
     def fetch_spotify_playlist(url)
-      playlist_url = url.split('?', 2).first
+      playlist_url = canonical_url(url, :spotify)
       playlist_id  = playlist_url.match(%r{playlist/([A-Za-z0-9]+)})&.captures&.first
       abort 'Invalid playlist URL' unless playlist_id
 
@@ -281,6 +284,22 @@ module Exportify
       else
         tty.gets.chomp
       end
+    end
+
+    def canonical_url(url, source)
+      source == :spotify ? url.split('?', 2).first : url
+    end
+
+    def resolve_target(target)
+      source = source_for(target)
+      return [target, source] if source
+
+      meta = PlaylistMeta.read(target)
+      url  = meta && meta[:url]
+      saved_source = url && source_for(url)
+      return [url, saved_source] if saved_source
+
+      nil
     end
 
     def source_for(url)

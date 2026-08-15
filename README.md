@@ -104,6 +104,30 @@ Para atualizar as tags dos arquivos já baixados sem rebaixar:
 bin/exportify https://open.spotify.com/playlist/<playlist_id> --retag
 ```
 
+### Usar o nome da playlist em vez da URL
+
+Todo download grava um `.exportify.json` dentro da pasta da playlist, com a URL de origem, a origem
+(`spotify`, `youtube`, `youtube_video`), o nome original e a data da última sincronização:
+
+```json
+{
+  "url": "https://open.spotify.com/playlist/4xFRymXBprhoyr25uvyp0U",
+  "source": "spotify",
+  "name": "Deep House 2026",
+  "synced_at": "2026-08-14T20:15:03Z"
+}
+```
+
+Com isso, `--sync` e `--retag` aceitam o nome da pasta da playlist no lugar da URL:
+
+```sh
+bin/exportify "Deep House 2026" --sync
+bin/exportify "Deep House 2026" --retag
+```
+
+Playlists baixadas antes dessa versão não têm o arquivo: rode uma vez com a URL para gerá-lo.
+Parâmetros de rastreamento da URL do Spotify (`?si=...`) são descartados antes de salvar.
+
 ### Visualizar playlists baixadas (app web)
 
 Para navegar pelas playlists e músicas já baixadas em um painel web:
