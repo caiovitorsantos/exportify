@@ -334,4 +334,20 @@ class LibraryTest < Minitest::Test
       assert_equal 'Am', tags[:key]
     end
   end
+
+  def test_read_tags_script_reads_bpm_and_key_frames
+    script = nil
+    status = Object.new
+    status.define_singleton_method(:success?) { true }
+
+    Open3.stub(:capture3, lambda { |_cmd, _flag, s|
+      script = s
+      ['{}', '', status]
+    }) do
+      Exportify::Library.read_tags('/tmp/x.mp3')
+    end
+
+    assert_includes script, 'TBPM'
+    assert_includes script, 'TKEY'
+  end
 end
