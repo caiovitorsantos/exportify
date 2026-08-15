@@ -1,6 +1,6 @@
-.PHONY: install check-ruby install-yt-dlp install-mutagen bundle help
+.PHONY: install check-ruby install-yt-dlp install-mutagen install-analysis bundle help
 
-install: check-ruby install-yt-dlp install-mutagen bundle
+install: check-ruby install-yt-dlp install-mutagen install-analysis bundle
 	@echo "\nAmbiente pronto."
 
 help:
@@ -9,6 +9,7 @@ help:
 	@echo "  make check-ruby       - verifica se a versão do Ruby bate com .ruby-version"
 	@echo "  make install-yt-dlp   - instala o yt-dlp, se ainda não estiver disponível"
 	@echo "  make install-mutagen  - instala o mutagen (Python), se ainda não estiver disponível"
+	@echo "  make install-analysis - instala keyfinder-cli e aubio (BPM/key), se ainda não estiverem disponíveis"
 	@echo "  make bundle           - instala as gems do projeto (bundle install)"
 
 check-ruby:
@@ -48,6 +49,21 @@ install-mutagen:
 		pip3 install --user mutagen; \
 	else \
 		echo "python3/pip3 não encontrados. Instale o Python 3 primeiro: https://www.python.org/downloads/"; \
+		exit 1; \
+	fi
+
+install-analysis:
+	@if command -v keyfinder-cli >/dev/null 2>&1 && command -v aubio >/dev/null 2>&1; then \
+		echo "keyfinder-cli e aubio já instalados."; \
+	elif [ "$$(uname -s)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then \
+		echo "Instalando keyfinder-cli e aubio via Homebrew..."; \
+		brew install keyfinder-cli aubio; \
+	elif [ "$$(uname -s)" = "Linux" ] && command -v apt-get >/dev/null 2>&1; then \
+		echo "Instalando keyfinder-cli e aubio via apt..."; \
+		sudo apt-get update && sudo apt-get install -y keyfinder-cli aubio; \
+	else \
+		echo "Não foi possível instalar keyfinder-cli/aubio automaticamente neste sistema."; \
+		echo "Instale manualmente (keyfinder-cli e aubio) e rode novamente."; \
 		exit 1; \
 	fi
 

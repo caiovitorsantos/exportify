@@ -7,6 +7,9 @@ Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, a
 - Ruby 3.3+
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — `brew install yt-dlp`
 - Python 3 + [mutagen](https://mutagen.readthedocs.io/) — `pip3 install mutagen`
+- [keyfinder-cli](https://github.com/EvanPurkhiser/keyfinder-cli) e
+  [aubio](https://aubio.org/) — detecção de tonalidade (key) e BPM —
+  `brew install keyfinder-cli aubio`
 - A Spotify Developer application
 - Para playlists ou vídeos únicos do YouTube/YouTube Music não é necessária nenhuma credencial adicional — só o `yt-dlp`.
 
@@ -20,7 +23,7 @@ Downloads a Spotify playlist as MP3 files with proper ID3 tags (title, artist, a
 make install
 ```
 
-Isso verifica a versão do Ruby, instala o yt-dlp (via Homebrew no macOS ou apt no Linux), instala o mutagen (Python) e roda `bundle install`. Cada etapa pode ser rodada isoladamente (`make check-ruby`, `make install-yt-dlp`, `make install-mutagen`, `make bundle`) — veja `make help` para a lista completa. Se preferir instalar manualmente, veja a seção [Requirements](#requirements) acima.
+Isso verifica a versão do Ruby, instala o yt-dlp (via Homebrew no macOS ou apt no Linux), instala o mutagen (Python), instala o keyfinder-cli e o aubio (para BPM/key) e roda `bundle install`. Cada etapa pode ser rodada isoladamente (`make check-ruby`, `make install-yt-dlp`, `make install-mutagen`, `make install-analysis`, `make bundle`) — veja `make help` para a lista completa. Se preferir instalar manualmente, veja a seção [Requirements](#requirements) acima.
 
 4. Execute o setup interativo:
 
@@ -103,6 +106,55 @@ Para atualizar as tags dos arquivos já baixados sem rebaixar:
 ```sh
 bin/exportify https://open.spotify.com/playlist/<playlist_id> --retag
 ```
+
+### Usar o nome da playlist em vez da URL
+
+Todo download grava um `.exportify.json` dentro da pasta da playlist, com a URL de origem, a origem
+(`spotify`, `youtube`, `youtube_video`), o nome original e a data da última sincronização:
+
+```json
+{
+  "url": "https://open.spotify.com/playlist/4xFRymXBprhoyr25uvyp0U",
+  "source": "spotify",
+  "name": "Deep House 2026",
+  "synced_at": "2026-08-14T20:15:03Z"
+}
+```
+
+Com isso, `--sync` e `--retag` aceitam o nome da pasta da playlist no lugar da URL:
+
+```sh
+bin/exportify "Deep House 2026" --sync
+bin/exportify "Deep House 2026" --retag
+```
+
+Playlists baixadas antes dessa versão não têm o arquivo: rode uma vez com a URL para gerá-lo.
+Parâmetros de rastreamento da URL do Spotify (`?si=...`) são descartados antes de salvar.
+
+### Analisar BPM e tonalidade (key)
+
+Faixas novas já saem analisadas no download (BPM em `TBPM`, key em `TKEY`).
+Para desligar a análise pontualmente:
+
+```sh
+exportify <url> --no-analyze
+```
+
+Para analisar faixas já baixadas (acervo antigo):
+
+```sh
+exportify analyze "Nome da Playlist"   # uma playlist
+exportify analyze --all                # todas as playlists
+```
+
+Faixas que já têm BPM e key são puladas. Use `--reanalyze` para recalcular:
+
+```sh
+exportify analyze --all --reanalyze
+```
+
+A tonalidade é exibida no app web em notação Camelot (ex.: `128 · 8A`),
+usada para mixagem harmônica.
 
 ### Visualizar playlists baixadas (app web)
 

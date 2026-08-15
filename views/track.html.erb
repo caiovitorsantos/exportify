@@ -32,6 +32,17 @@
     <span class="track-meta__value"><%= ERB::Util.html_escape(track[:genre] || '—') %></span>
   </li>
   <li class="track-meta__row">
+    <span class="track-meta__label">BPM</span>
+    <span class="track-meta__value"><%= ERB::Util.html_escape(track[:bpm] || '—') %></span>
+  </li>
+  <li class="track-meta__row">
+    <span class="track-meta__label">Key</span>
+    <span class="track-meta__value">
+      <%= ERB::Util.html_escape([track[:key], track[:camelot] && "(#{track[:camelot]})"].compact.join(' ')) %>
+      <%= '—' if track[:key].nil? %>
+    </span>
+  </li>
+  <li class="track-meta__row">
     <span class="track-meta__label">Duração</span>
     <span class="track-meta__value"><%= duration %></span>
   </li>

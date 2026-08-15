@@ -165,6 +165,150 @@ class CLITest < Minitest::Test
     assert_nil Exportify::CLI.source_for('https://www.youtube.com/watch?list=PL123')
   end
 
+  def test_resolve_target_returns_url_and_source_for_direct_url
+    url = 'https://open.spotify.com/playlist/abc123'
+
+    assert_equal [url, :spotify], Exportify::CLI.resolve_target(url)
+  end
+
+  def test_resolve_target_resolves_playlist_name_to_saved_url
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Deep House')
+      FileUtils.mkdir_p(playlist_dir)
+      Exportify::PlaylistMeta.write(
+        playlist_dir,
+        url: 'https://open.spotify.com/playlist/abc123',
+        source: :spotify,
+        name: 'Deep House'
+      )
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_equal(
+          ['https://open.spotify.com/playlist/abc123', :spotify],
+          Exportify::CLI.resolve_target('Deep House')
+        )
+      end
+    end
+  end
+
+  def test_resolve_target_returns_nil_for_playlist_without_saved_url
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'Deep House'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::CLI.resolve_target('Deep House')
+      end
+    end
+  end
+
+  def test_resolve_target_returns_nil_for_unknown_argument
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_nil Exportify::CLI.resolve_target('Nao Existe')
+      end
+    end
+  end
+
+  def test_run_by_playlist_name_fetches_saved_url
+    require 'tmpdir'
+    received_url = nil
+
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'P')
+      FileUtils.mkdir_p(playlist_dir)
+      Exportify::PlaylistMeta.write(
+        playlist_dir,
+        url: 'https://www.youtube.com/playlist?list=PL123',
+        source: :youtube,
+        name: 'P'
+      )
+
+      fetch_stub = lambda do |url, **|
+        received_url = url
+        { name: 'P', tracks: [] }
+      end
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, fetch_stub) do
+          Exportify::CLI.run(['P', '--sync'])
+        end
+      end
+    end
+
+    assert_equal 'https://www.youtube.com/playlist?list=PL123', received_url
+  end
+
+  def test_run_exits_for_playlist_name_without_saved_url
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'Deep House'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        assert_output(nil, /Deep House/) do
+          assert_raises(SystemExit) { Exportify::CLI.run(['Deep House', '--sync']) }
+        end
+      end
+    end
+  end
+
+  def test_run_saves_playlist_meta_without_query_string
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::CLI.stub(:fetch_spotify_playlist, ['Deep House', []]) do
+          Exportify::CLI.run(['https://open.spotify.com/playlist/abc123?si=xyz'])
+        end
+
+        meta = Exportify::PlaylistMeta.read('Deep House')
+
+        assert_equal 'https://open.spotify.com/playlist/abc123', meta[:url]
+        assert_equal 'spotify', meta[:source]
+        assert_equal 'Deep House', meta[:name]
+      end
+    end
+  end
+
+  def test_run_keeps_youtube_query_string_in_saved_meta
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, { name: 'P', tracks: [] }) do
+          Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123'])
+        end
+
+        assert_equal 'https://www.youtube.com/playlist?list=PL123', Exportify::PlaylistMeta.read('P')[:url]
+      end
+    end
+  end
+
+  def test_sync_keeps_meta_file
+    require 'tmpdir'
+
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'P')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'Orphan - Track.mp3'))
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, { name: 'P', tracks: [] }) do
+          Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123', '--sync'])
+        end
+      end
+
+      assert_path_exists File.join(playlist_dir, '.exportify.json')
+      refute_path_exists File.join(playlist_dir, 'Orphan - Track.mp3')
+    end
+  end
+
   def test_youtube_source_skips_spotify_credentials_check
     require 'tmpdir'
     ENV.delete('SPOTIFY_CLIENT_ID')
@@ -462,6 +606,72 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_download_runs_analysis_by_default
+    require 'tmpdir'
+    analyzed = []
+
+    fake_data = {
+      name: 'P',
+      tracks: [
+        { artist: 'A', name: 'Song', video_id: 'vid1', all_artists: 'A',
+          raw_name: 'Song', album: 'P', year: '', track_number: 1, genre: '' }
+      ]
+    }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, fake_data) do
+          # cria o arquivo para File.exist? passar
+          Exportify::Downloader.stub(:download, lambda do |_t, out, **|
+            FileUtils.touch(File.join(out, 'A - Song.mp3'))
+            true
+          end) do
+            Exportify::Tagger.stub(:tag, true) do
+              Exportify::Analyzer.stub(:analyze, { bpm: 128, key: 'Am' }) do
+                Exportify::Tagger.stub(:tag_analysis, ->(path, **kw) { analyzed << [path, kw] }) do
+                  Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123'])
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 1, analyzed.size
+    assert_equal({ bpm: 128, key: 'Am' }, analyzed.first[1])
+  end
+
+  def test_no_analyze_flag_skips_analysis
+    require 'tmpdir'
+
+    fake_data = {
+      name: 'P',
+      tracks: [
+        { artist: 'A', name: 'Song', video_id: 'vid1', all_artists: 'A',
+          raw_name: 'Song', album: 'P', year: '', track_number: 1, genre: '' }
+      ]
+    }
+
+    Dir.mktmpdir do |dir|
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::YouTube.stub(:fetch_playlist, fake_data) do
+          Exportify::Downloader.stub(:download, lambda do |_t, out, **|
+            FileUtils.touch(File.join(out, 'A - Song.mp3'))
+            true
+          end) do
+            Exportify::Tagger.stub(:tag, true) do
+              # se a análise rodar, o raise falha o teste
+              Exportify::Analyzer.stub(:analyze, ->(*_a) { raise 'não deveria analisar' }) do
+                Exportify::CLI.run(['https://www.youtube.com/playlist?list=PL123', '--no-analyze'])
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   def test_download_chaptered_video_rejects_browser_starting_with_dash
     require 'tmpdir'
 
@@ -472,5 +682,75 @@ class CLITest < Minitest::Test
         Exportify::CLI.download_chaptered_video({ name: 'V', tracks: tracks }, dir, browser: '--exec=evil')
       end
     end
+  end
+
+  def test_analyze_playlist_skips_already_analyzed
+    require 'tmpdir'
+
+    Dir.mktmpdir do |root|
+      dir = File.join(root, 'MinhaPlaylist')
+      FileUtils.mkdir_p(dir)
+      FileUtils.touch(File.join(dir, 'A - Song.mp3'))
+
+      Exportify::Config.stub(:output_dir, root) do
+        Exportify::Library.stub(:read_tags, { bpm: '128', key: 'Am' }) do
+          Exportify::Analyzer.stub(:analyze, ->(*_a) { raise 'não deveria analisar' }) do
+            assert_output(/1 skipped/) do
+              Exportify::CLI.analyze_playlist('MinhaPlaylist')
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def test_analyze_playlist_analyzes_missing_and_tags
+    require 'tmpdir'
+    tagged = []
+
+    Dir.mktmpdir do |root|
+      dir = File.join(root, 'MinhaPlaylist')
+      FileUtils.mkdir_p(dir)
+      FileUtils.touch(File.join(dir, 'A - Song.mp3'))
+
+      Exportify::Config.stub(:output_dir, root) do
+        Exportify::Library.stub(:read_tags, { bpm: '', key: '' }) do
+          Exportify::Analyzer.stub(:analyze, { bpm: 128, key: 'Am' }) do
+            Exportify::Tagger.stub(:tag_analysis, ->(path, **kw) { tagged << [path, kw] }) do
+              assert_output(/1 analyzed/) do
+                Exportify::CLI.analyze_playlist('MinhaPlaylist')
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 1, tagged.size
+    assert_equal({ bpm: 128, key: 'Am' }, tagged.first[1])
+  end
+
+  def test_analyze_playlist_reanalyze_ignores_existing_tags
+    require 'tmpdir'
+    tagged = []
+
+    Dir.mktmpdir do |root|
+      dir = File.join(root, 'MinhaPlaylist')
+      FileUtils.mkdir_p(dir)
+      FileUtils.touch(File.join(dir, 'A - Song.mp3'))
+
+      Exportify::Config.stub(:output_dir, root) do
+        # já tem tags, mas --reanalyze força; read_tags nem deveria decidir skip
+        Exportify::Analyzer.stub(:analyze, { bpm: 130, key: 'Em' }) do
+          Exportify::Tagger.stub(:tag_analysis, ->(path, **kw) { tagged << [path, kw] }) do
+            assert_output(/1 analyzed/) do
+              Exportify::CLI.analyze_playlist('MinhaPlaylist', reanalyze: true)
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 1, tagged.size
   end
 end
