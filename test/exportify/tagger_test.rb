@@ -96,4 +96,43 @@ class TaggerTest < Minitest::Test
 
     assert_includes script, 'hip hop'
   end
+
+  def test_tag_analysis_writes_bpm_and_key
+    script = nil
+    Exportify::Tagger.stub(:system, lambda { |_cmd, _flag, s, **|
+      script = s
+      true
+    }) do
+      Exportify::Tagger.tag_analysis('/tmp/test.mp3', bpm: 128, key: 'Am')
+    end
+
+    assert_includes script, 'TBPM'
+    assert_includes script, '128'
+    assert_includes script, 'TKEY'
+    assert_includes script, 'Am'
+  end
+
+  def test_tag_analysis_writes_only_bpm_when_key_missing
+    script = nil
+    Exportify::Tagger.stub(:system, lambda { |_cmd, _flag, s, **|
+      script = s
+      true
+    }) do
+      Exportify::Tagger.tag_analysis('/tmp/test.mp3', bpm: 128, key: nil)
+    end
+
+    assert_includes script, 'TBPM'
+    refute_includes script, 'TKEY'
+  end
+
+  def test_tag_analysis_is_noop_when_both_nil
+    called = false
+    Exportify::Tagger.stub(:system, ->(*_args) { called = true }) do
+      result = Exportify::Tagger.tag_analysis('/tmp/test.mp3', bpm: nil, key: nil)
+
+      assert_nil result
+    end
+
+    refute called
+  end
 end

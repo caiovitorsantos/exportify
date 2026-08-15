@@ -425,3 +425,14 @@ a:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.chart-list__badge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted, #9aa0a6);
+  background: rgba(127, 127, 127, 0.15);
+}

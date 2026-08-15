@@ -9,6 +9,8 @@ require_relative 'youtube'
 require_relative 'downloader'
 require_relative 'tagger'
 require_relative 'playlist_meta'
+require_relative 'analyzer'
+require_relative 'library'
 
 module Exportify
   module CLI
@@ -19,10 +21,12 @@ module Exportify
     def run(argv)
       return run_init(argv[1]) if argv[0] == 'init'
       return run_web(argv[1..]) if argv[0] == 'web'
+      return run_analyze(argv[1..]) if argv[0] == 'analyze'
 
       retag   = false
       sync    = false
       browser = nil
+      analyze = true
 
       parser = OptionParser.new do |opts|
         opts.banner = "Usage:\n  " \
@@ -35,6 +39,7 @@ module Exportify
         opts.on('--browser=NOME', 'Navegador para extrair cookies (playlists privadas do YouTube)') do |b|
           browser = b
         end
+        opts.on('--no-analyze', 'Não detectar BPM/key após o download') { analyze = false }
       end
 
       parser.parse!(argv)
@@ -70,7 +75,8 @@ module Exportify
       puts "Output: #{output_dir}\n\n"
 
       if chaptered
-        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir, retag: retag, browser: browser)
+        result = download_chaptered_video({ name: name, tracks: tracks }, output_dir,
+                                          retag: retag, browser: browser, analyze: analyze)
         ok     = result[:ok]
         skip   = result[:skip]
         failed = result[:failed]
@@ -108,6 +114,7 @@ module Exportify
 
           if success && File.exist?(filepath)
             Tagger.tag(filepath, track)
+            analyze_file(filepath) if analyze
             ok += 1
           else
             failed += 1
@@ -155,7 +162,7 @@ module Exportify
       [name, tracks]
     end
 
-    def download_chaptered_video(data, output_dir, retag: false, browser: nil)
+    def download_chaptered_video(data, output_dir, retag: false, browser: nil, analyze: true)
       tracks = data[:tracks]
       expected_files = tracks.map do |track|
         "#{Downloader.sanitize(track[:artist])} - #{Downloader.sanitize(track[:name])}.mp3"
@@ -212,6 +219,7 @@ module Exportify
         target_file = File.join(output_dir, expected_files[i])
         File.rename(source_file, target_file)
         Tagger.tag(target_file, track)
+        analyze_file(target_file) if analyze
         ok += 1
       end
 
@@ -308,6 +316,78 @@ module Exportify
       return :youtube_video if url.match?(%r{(music\.)?youtube\.com/watch}) && url.match?(/[?&]v=/)
 
       nil
+    end
+
+    def analyze_file(filepath)
+      result = Analyzer.analyze(filepath)
+      Tagger.tag_analysis(filepath, **result) if result
+    end
+
+    def run_analyze(argv)
+      reanalyze = false
+      all       = false
+
+      parser = OptionParser.new do |opts|
+        opts.banner = "Usage:\n  " \
+                      "exportify analyze \"<playlist>\" [--reanalyze]\n  " \
+                      'exportify analyze --all [--reanalyze]'
+        opts.on('--reanalyze', 'Recalcular BPM/key mesmo em faixas já analisadas') { reanalyze = true }
+        opts.on('--all', 'Analisar todas as playlists baixadas') { all = true }
+      end
+      parser.parse!(argv)
+
+      targets =
+        if all
+          Library.playlists.map { |playlist| playlist[:name] }
+        elsif argv[0]
+          [argv[0]]
+        else
+          abort parser.banner
+        end
+
+      targets.each { |name| analyze_playlist(name, reanalyze: reanalyze) }
+    end
+
+    def analyze_playlist(playlist_name, reanalyze: false)
+      dir = Library.playlist_dir(playlist_name)
+      unless dir
+        puts "Playlist não encontrada: #{playlist_name}"
+        return
+      end
+
+      files = Dir.glob(File.join(dir, '*.mp3'))
+      puts "#{playlist_name}: #{files.size} faixas"
+
+      analyzed = skipped = failed = 0
+
+      files.each do |filepath|
+        print "  #{File.basename(filepath)} "
+
+        if !reanalyze && already_analyzed?(filepath)
+          puts '(já analisada, pulando)'
+          skipped += 1
+          next
+        end
+
+        result = Analyzer.analyze(filepath)
+        if result
+          Tagger.tag_analysis(filepath, **result)
+          puts "(#{result[:bpm]} BPM, #{result[:key]})"
+          analyzed += 1
+        else
+          puts '(falha na análise)'
+          failed += 1
+        end
+      end
+
+      puts "\n#{playlist_name}: #{analyzed} analyzed, #{skipped} skipped, #{failed} failed."
+    end
+
+    def already_analyzed?(filepath)
+      tags = Library.read_tags(filepath)
+      return false unless tags
+
+      !tags[:bpm].to_s.strip.empty? && !tags[:key].to_s.strip.empty?
     end
   end
 end
