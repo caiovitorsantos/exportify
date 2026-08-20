@@ -358,7 +358,7 @@ class LibraryTest < Minitest::Test
     Exportify::Library.stub(:read_tags, tags) do
       summary = Exportify::Library.track_summary('/x/A - T.mp3')
 
-      assert_equal '128', summary[:bpm]
+      assert_equal '128.00', summary[:bpm]
       assert_equal '8A', summary[:camelot]
     end
   end
@@ -370,6 +370,32 @@ class LibraryTest < Minitest::Test
 
       assert_nil summary[:bpm]
       assert_nil summary[:camelot]
+    end
+  end
+
+  def test_track_summary_rounds_bpm_with_excess_decimal_places
+    tags = { title: 'T', artist: 'A', track_number: '1', genre: 'x', bpm: '122.000000', key: 'Am' }
+    Exportify::Library.stub(:read_tags, tags) do
+      summary = Exportify::Library.track_summary('/x/A - T.mp3')
+
+      assert_equal '122.00', summary[:bpm]
+    end
+  end
+
+  def test_track_rounds_bpm_with_excess_decimal_places
+    Dir.mktmpdir do |dir|
+      playlist_dir = File.join(dir, 'Rock')
+      FileUtils.mkdir_p(playlist_dir)
+      FileUtils.touch(File.join(playlist_dir, 'A - T.mp3'))
+      tags = { title: 'T', artist: 'A', bpm: '125.990000', key: 'Am' }
+
+      Exportify::Config.stub(:output_dir, dir) do
+        Exportify::Library.stub(:read_tags, tags) do
+          track = Exportify::Library.track('Rock', 'A - T.mp3')
+
+          assert_equal '125.99', track[:bpm]
+        end
+      end
     end
   end
 end

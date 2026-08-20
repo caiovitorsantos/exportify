@@ -35,6 +35,13 @@ module Exportify
       nil
     end
 
+    # Normaliza um BPM lido de tag (ex.: "122.000000") para 2 casas decimais.
+    def format_bpm(value)
+      value.nil? ? nil : format('%.2f', Float(value))
+    rescue ArgumentError, TypeError
+      value
+    end
+
     # Tonalidade via `keyfinder-cli`, que imprime a key musical (ex.: "Am").
     # Errno::ENOENT = binário não instalado → degrada para nil.
     def detect_key(filepath)

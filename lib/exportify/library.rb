@@ -97,7 +97,8 @@ module Exportify
       genre  = presence(tags && tags[:genre])
       key    = presence(tags && tags[:key])
 
-      { filename: filename, title: title, artist: artist, genre: genre, bpm: presence(tags && tags[:bpm]),
+      { filename: filename, title: title, artist: artist, genre: genre,
+        bpm: Analyzer.format_bpm(presence(tags && tags[:bpm])),
         key: key, camelot: key && Analyzer.camelot(key), sort_key: number || Float::INFINITY }
     end
 
@@ -116,13 +117,11 @@ module Exportify
         all_artists: presence(tags && tags[:all_artists]) || fallback[:artist],
         album: presence(tags && tags[:album]),
         year: presence(tags && tags[:year]),
-        track_number: presence(tags && tags[:track_number]),
-        genre: presence(tags && tags[:genre]),
-        bpm: presence(tags && tags[:bpm]),
+        track_number: presence(tags && tags[:track_number]), genre: presence(tags && tags[:genre]),
+        bpm: Analyzer.format_bpm(presence(tags && tags[:bpm])),
         key: presence(tags && tags[:key]),
         camelot: (k = presence(tags && tags[:key])) && Analyzer.camelot(k),
-        duration_seconds: tags && tags[:duration_seconds],
-        file_size_bytes: File.size(filepath)
+        duration_seconds: tags && tags[:duration_seconds], file_size_bytes: File.size(filepath)
       }
     end
 
