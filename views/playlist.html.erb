@@ -4,10 +4,10 @@
   <div class="page-header__actions">
     <button type="button" class="btn" data-job-trigger="sync"
             data-playlist="<%= ERB::Util.html_escape(playlist_name) %>"
-            data-has-source="<%= source ? '1' : '' %>">Sincronizar</button>
+            data-source-url="<%= ERB::Util.html_escape(source ? source[:url] : '') %>">Sincronizar</button>
     <button type="button" class="btn" data-job-trigger="retag"
             data-playlist="<%= ERB::Util.html_escape(playlist_name) %>"
-            data-has-source="<%= source ? '1' : '' %>">Retag</button>
+            data-source-url="<%= ERB::Util.html_escape(source ? source[:url] : '') %>">Retag</button>
   </div>
 </div>
 
