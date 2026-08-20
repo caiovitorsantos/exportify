@@ -1,7 +1,12 @@
+<div class="page-header">
+  <h1>Playlists</h1>
+  <button type="button" class="btn btn--primary" data-job-trigger="create">+ Nova playlist</button>
+</div>
+
 <% if playlists.empty? %>
   <div class="empty-state">
     <p>Nenhuma playlist baixada ainda.</p>
-    <p>Use <code>bin/exportify &lt;url_da_playlist&gt;</code> para baixar uma.</p>
+    <p>Use <code>bin/exportify &lt;url_da_playlist&gt;</code> ou o botão acima para baixar uma.</p>
   </div>
 <% else %>
   <div class="playlist-grid" id="search-container">

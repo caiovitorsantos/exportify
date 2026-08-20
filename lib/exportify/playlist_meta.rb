@@ -9,11 +9,12 @@ module Exportify
 
     module_function
 
-    def write(dir, url:, source:, name:)
+    def write(dir, url:, source:, name:, browser: nil)
       meta = {
         'url' => url,
         'source' => source.to_s,
         'name' => name,
+        'browser' => browser,
         'synced_at' => Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ')
       }
 

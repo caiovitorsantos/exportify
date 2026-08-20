@@ -1,0 +1,28 @@
+<dialog id="job-modal" class="modal">
+  <h2 id="job-modal__title">Nova playlist</h2>
+
+  <div id="job-modal__form">
+    <label class="modal__field" id="job-modal__url-field">
+      URL da playlist
+      <input type="url" id="job-modal__url" placeholder="https://open.spotify.com/playlist/...">
+    </label>
+
+    <label class="modal__field" id="job-modal__browser-field">
+      Navegador (opcional, para playlists privadas do YouTube)
+      <select id="job-modal__browser">
+        <option value="">Nenhum</option>
+        <option value="chrome">Chrome</option>
+        <option value="firefox">Firefox</option>
+        <option value="safari">Safari</option>
+        <option value="edge">Edge</option>
+      </select>
+    </label>
+
+    <button type="button" id="job-modal__submit" class="btn btn--primary">Confirmar</button>
+  </div>
+
+  <div id="job-modal__progress" class="modal__log" hidden></div>
+  <p id="job-modal__error" class="modal__error" hidden></p>
+
+  <button type="button" id="job-modal__close" class="btn">Fechar</button>
+</dialog>
