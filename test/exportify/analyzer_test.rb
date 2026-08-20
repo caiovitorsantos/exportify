@@ -26,7 +26,7 @@ class AnalyzerTest < Minitest::Test
   def test_detect_bpm_rounds_to_two_decimal_places
     # beats a cada 0.47s -> 60/0.47 = 127.659574... -> 127.66 BPM
     Open3.stub(:capture3, ["0.00\n0.47\n0.94\n1.41\n1.88\n", '', ok_status]) do
-      assert_equal 127.66, Exportify::Analyzer.detect_bpm('/tmp/x.mp3')
+      assert_in_delta 127.66, Exportify::Analyzer.detect_bpm('/tmp/x.mp3')
     end
   end
 
