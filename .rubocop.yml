@@ -60,7 +60,6 @@ Metrics/BlockLength:
 Metrics/ModuleLength:
   Exclude:
     - 'lib/exportify/cli.rb'
-    - 'lib/exportify/library.rb'
 
 Metrics/ClassLength:
   Exclude:
