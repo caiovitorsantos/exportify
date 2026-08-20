@@ -15,8 +15,9 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Suporte a download de um vídeo único do YouTube com corte automático por
   capítulos (um MP3 por capítulo, com tags ID3 corretas); sem capítulos,
   baixa como uma faixa única.
-- Detecção automática de BPM e tonalidade (key) no download, gravadas nas tags
-  ID3 (`TBPM`/`TKEY`); desligável com `--no-analyze`.
+- Detecção automática de BPM (com 2 casas decimais) e tonalidade (key) no
+  download, gravadas nas tags ID3 (`TBPM`/`TKEY`); desligável com
+  `--no-analyze`.
 - Subcomando `analyze` para detectar BPM/key de faixas já baixadas
   (`analyze "<playlist>"` ou `analyze --all`, com `--reanalyze` para recalcular).
 - Exibição de BPM e tonalidade em notação Camelot no app web.

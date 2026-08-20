@@ -30,7 +30,7 @@ module Exportify
       return nil if intervals.empty?
 
       median = intervals.sort[intervals.size / 2]
-      (60.0 / median).round
+      (60.0 / median).round(2)
     rescue Errno::ENOENT
       nil
     end
