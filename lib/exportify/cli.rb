@@ -69,7 +69,7 @@ module Exportify
       output_dir = File.expand_path(File.join(Config.output_dir, Downloader.sanitize(name)))
 
       FileUtils.mkdir_p(output_dir)
-      PlaylistMeta.write(output_dir, url: canonical_url(url, source), source: source, name: name)
+      PlaylistMeta.write(output_dir, url: canonical_url(url, source), source: source, name: name, browser: browser)
 
       puts "#{tracks.size} tracks found"
       puts "Output: #{output_dir}\n\n"
