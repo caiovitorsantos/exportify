@@ -90,7 +90,7 @@ module Exportify
     def run_playlist_action(req, res, playlist_name, flag)
       return render_json(res, 404, error: 'Playlist não encontrada.') unless Library.playlist_dir(playlist_name)
 
-      source = Library.source(playlist_name)
+      source = PlaylistMeta.read(playlist_name)
       url = source ? source[:url] : Library.presence(req.query['url'])
 
       return render_json(res, 422, error: 'Informe a URL de origem desta playlist.') unless url
@@ -129,7 +129,7 @@ module Exportify
       genres = tracks.filter_map { |track| track[:genre] }.uniq.sort
       res.body = render_template(
         'playlist',
-        playlist_name: name, tracks: tracks, genres: genres, source: Library.source(name)
+        playlist_name: name, tracks: tracks, genres: genres, source: PlaylistMeta.read(name)
       )
     end
 
