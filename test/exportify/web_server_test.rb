@@ -312,6 +312,25 @@ class WebServerTest < Minitest::Test
     refute_includes received_cmd, '--retag'
   end
 
+  def test_post_sync_url_param_overrides_stored_source
+    FileUtils.mkdir_p(File.join(@dir, 'Rock'))
+    File.write(File.join(@dir, 'Rock', '.exportify.json'), '{"url":"https://open.spotify.com/playlist/abc123"}')
+    received_cmd = nil
+
+    with_server do |port|
+      Exportify::Jobs.stub(:start, lambda { |cmd|
+        received_cmd = cmd
+        'job123'
+      }) do
+        uri = URI("http://127.0.0.1:#{port}/playlists/Rock/sync")
+        Net::HTTP.post_form(uri, 'url' => 'https://open.spotify.com/playlist/xyz')
+      end
+    end
+
+    assert_includes received_cmd, 'https://open.spotify.com/playlist/xyz'
+    refute_includes received_cmd, 'https://open.spotify.com/playlist/abc123'
+  end
+
   def test_post_retag_without_stored_source_accepts_url_param
     FileUtils.mkdir_p(File.join(@dir, 'Rock'))
     received_cmd = nil
@@ -365,14 +384,14 @@ class WebServerTest < Minitest::Test
     end
   end
 
-  def test_get_playlist_exposes_source_presence_for_view
+  def test_get_playlist_exposes_source_url_for_view
     FileUtils.mkdir_p(File.join(@dir, 'Rock'))
     File.write(File.join(@dir, 'Rock', '.exportify.json'), '{"url":"https://open.spotify.com/playlist/abc123"}')
 
     with_server do |port|
       response = Net::HTTP.get_response(URI("http://127.0.0.1:#{port}/playlists/Rock"))
 
-      assert_includes response.body, 'data-has-source="1"'
+      assert_includes response.body, 'data-source-url="https://open.spotify.com/playlist/abc123"'
     end
   end
 

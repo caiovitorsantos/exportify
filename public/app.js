@@ -85,7 +85,6 @@
     var titleEl = document.getElementById('job-modal__title');
     var formSection = document.getElementById('job-modal__form');
     var urlField = document.getElementById('job-modal__url');
-    var urlFieldWrap = document.getElementById('job-modal__url-field');
     var browserFieldWrap = document.getElementById('job-modal__browser-field');
     var browserField = document.getElementById('job-modal__browser');
     var submitBtn = document.getElementById('job-modal__submit');
@@ -117,8 +116,8 @@
       playlistName = trigger.dataset.playlist || null;
       reset();
       titleEl.textContent = TITLES[action] || '';
-      urlFieldWrap.hidden = action !== 'create' && trigger.dataset.hasSource === '1';
       browserFieldWrap.hidden = action !== 'create';
+      urlField.value = trigger.dataset.sourceUrl || '';
       modal.showModal();
     }
 
@@ -158,7 +157,7 @@
       submitBtn.disabled = true;
 
       var params = new URLSearchParams();
-      if (!urlFieldWrap.hidden) params.set('url', urlField.value);
+      params.set('url', urlField.value);
       if (action === 'create') params.set('browser', browserField.value);
 
       fetch(endpointFor(), {

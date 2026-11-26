@@ -91,7 +91,7 @@ module Exportify
       return render_json(res, 404, error: 'Playlist não encontrada.') unless Library.playlist_dir(playlist_name)
 
       source = PlaylistMeta.read(playlist_name)
-      url = source ? source[:url] : Library.presence(req.query['url'])
+      url = Library.presence(req.query['url']) || (source && source[:url])
 
       return render_json(res, 422, error: 'Informe a URL de origem desta playlist.') unless url
       return render_json(res, 400, error: 'URL inválida.') if url.start_with?('-')
