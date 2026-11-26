@@ -1,4 +1,4 @@
-.PHONY: install check-ruby install-yt-dlp install-mutagen install-analysis bundle help
+.PHONY: install check-ruby install-yt-dlp install-mutagen install-analysis bundle web help
 
 install: check-ruby install-yt-dlp install-mutagen install-analysis bundle
 	@echo "\nAmbiente pronto."
@@ -11,6 +11,7 @@ help:
 	@echo "  make install-mutagen  - instala o mutagen (Python), se ainda não estiver disponível"
 	@echo "  make install-analysis - instala keyfinder-cli e aubio (BPM/key), se ainda não estiverem disponíveis"
 	@echo "  make bundle           - instala as gems do projeto (bundle install)"
+	@echo "  make web              - sobe o app web em http://localhost:4567 (outra porta: make web PORT=8080)"
 
 check-ruby:
 	@required=$$(cat .ruby-version); \
@@ -70,3 +71,6 @@ install-analysis:
 bundle:
 	@echo "Instalando gems do projeto..."
 	@bundle install
+
+web:
+	@bin/exportify web $(if $(PORT),--port $(PORT))
